@@ -65,7 +65,9 @@ export default function SettingsPage() {
           Şu an veriler sadece bu cihazda (tarayıcıda) tutuluyor. Başka bir cihaza taşımak için yedeği dışa aktarıp orada içe aktarabilirsin.
         </p>
         <div className="card divide-y divide-line">
-          <button onClick={exportData} className="w-full px-4 py-3 text-left text-sm hover:bg-surface-2">Yedeği dışa aktar (JSON)</button>
+          {import.meta.env.MODE !== 'single' && (
+            <button onClick={exportData} className="w-full px-4 py-3 text-left text-sm hover:bg-surface-2">Yedeği dışa aktar (JSON)</button>
+          )}
           <button onClick={() => fileRef.current?.click()} className="w-full px-4 py-3 text-left text-sm hover:bg-surface-2">Yedeği içe aktar</button>
           <button onClick={copyData} className="w-full px-4 py-3 text-left text-sm hover:bg-surface-2">Yedeği panoya kopyala</button>
           <div className="p-2">
