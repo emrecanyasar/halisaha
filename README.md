@@ -7,6 +7,8 @@ Halısaha ekibimiz için Sofascore / Flashscore tarzı maç ve oyuncu takip uygu
 
 İlk açılışta takım kadrosu yüklü gelir; maç ve hesap yoktur. Herkes **Kayıt ol** ekranında kadrodaki kendi profilini seçerek hesap açar.
 
+Hazır deneme hesabı: **Emre Can** → `emrecan@halisaha.app` / `123456`
+
 ## Özellikler
 
 - **Maçlar:** Yaklaşan / biten maç listesi, gün-saat-saha belirleme, takım adı ve rengi

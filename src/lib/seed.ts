@@ -87,7 +87,28 @@ export const withoutSamples = (d: AppData): AppData => {
   }
 }
 
-/** Yeni kurulum: sadece gerçek takım kadrosu, maç ve hesap yok. */
-export const createSeedData = (): AppData => withRoster(emptyData())
+/**
+ * Deneme için önceden açılmış hesaplar: [kadrodaki isim, e-posta, sha256('halisaha:<e-posta>:<şifre>')].
+ * Şifreler: emrecan@halisaha.app → 123456
+ */
+const PRESET_ACCOUNTS: [string, string, string][] = [
+  ['Emre Can', 'emrecan@halisaha.app', '7a2e5c457e7674fcbe574c48f4a43862bd99440fd7874d742795f415ade3bd4f'],
+]
 
-export const emptyData = (): AppData => ({ version: 4, club: { name: CLUB_NAME }, accounts: [], players: [], matches: [], votes: [], currentUserId: null })
+/** Hazır hesapları ekler: oyuncu kadroda varsa, ona bağlı hesap yoksa ve e-posta boştaysa. */
+export const withPresetAccounts = (d: AppData): AppData => {
+  const now = new Date().toISOString()
+  const add: AppData['accounts'] = []
+  for (const [name, email, passwordHash] of PRESET_ACCOUNTS) {
+    const player = d.players.find((p) => sameName(p.name, name))
+    if (!player) continue
+    if (d.accounts.some((a) => a.playerId === player.id || a.email === email)) continue
+    add.push({ id: uid(), email, passwordHash, playerId: player.id, createdAt: now })
+  }
+  return add.length ? { ...d, accounts: [...d.accounts, ...add] } : d
+}
+
+/** Yeni kurulum: gerçek takım kadrosu ve hazır deneme hesapları, maç yok. */
+export const createSeedData = (): AppData => withPresetAccounts(withRoster(emptyData()))
+
+export const emptyData = (): AppData => ({ version: 5, club: { name: CLUB_NAME }, accounts: [], players: [], matches: [], votes: [], currentUserId: null })
