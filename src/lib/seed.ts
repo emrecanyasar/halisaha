@@ -108,7 +108,79 @@ export const withPresetAccounts = (d: AppData): AppData => {
   return add.length ? { ...d, accounts: [...d.accounts, ...add] } : d
 }
 
-/** Yeni kurulum: gerçek takım kadrosu ve hazır deneme hesapları, maç yok. */
-export const createSeedData = (): AppData => withPresetAccounts(withRoster(emptyData()))
+/** 19 Kasım MANU – BAY maçı: [isim, x%, y%] — ekran görüntüsündeki dizilişle */
+const MANU_BAY = {
+  date: '2026-11-19',
+  time: '19:00',
+  venue: 'Haldun Alagaş Spor Kompleksi',
+  perSide: 8,
+  formation: [1, 3, 3, 1],
+  // A takımı (alt yarı): kaleci, 3 defans, 3 orta saha, 1 forvet
+  manu: [
+    ['Neşe', 49.9, 91.0],
+    ['H. Turan', 24.9, 79.7], ['Emre Can', 49.9, 79.4], ['Bakar', 73.5, 80.0],
+    ['Caner', 26.5, 67.2], ['Nejdet', 49.9, 67.8], ['Barış', 75.1, 67.8],
+    ['Demir', 49.9, 54.8],
+  ] as [string, number, number][],
+  // B takımı (üst yarı)
+  bay: [
+    ['Alperen', 49.9, 6.2],
+    ['Kadir', 19.1, 19.7], ['Turgut', 49.9, 16.4], ['Zafer', 79.8, 19.7],
+    ['Enes', 32.6, 42.9], ['Salih', 50.3, 27.2], ['Oz', 65.2, 43.5],
+    ['Eren', 49.7, 37.1],
+  ] as [string, number, number][],
+}
 
-export const emptyData = (): AppData => ({ version: 5, club: { name: CLUB_NAME }, accounts: [], players: [], matches: [], votes: [], currentUserId: null })
+/**
+ * MANU – BAY maçını kaydeder. Aynı gün MANU'nun bir maçı ya da aynı sahada bir maç varsa
+ * onu bu kadroyla günceller (kimliği ve durumu korunur), yoksa yeni maç ekler.
+ */
+export const withPresetMatch = (d: AppData): AppData => {
+  const P = MANU_BAY
+  const byName = (n: string) => d.players.find((p) => sameName(p.name, n))?.id ?? null
+  const team = (name: string, color: string, rows: [string, number, number][]) => ({
+    name,
+    color,
+    formation: P.formation,
+    slots: rows.map(([n]) => byName(n)),
+    positions: rows.map(([, x, y]) => ({ x, y })),
+  })
+  const teamA = team('MANU', '#111827', P.manu)
+  const teamB = team('BAY', '#f8fafc', P.bay)
+  const existing = d.matches.find(
+    (m) => m.date === P.date && (sameName(m.teamA.name, 'MANU') || sameName(m.venue, P.venue)),
+  )
+  if (existing) {
+    if (existing.status !== 'planned') return d
+    return {
+      ...d,
+      matches: d.matches.map((m) =>
+        m.id === existing.id ? { ...m, time: P.time, venue: P.venue, playersPerSide: P.perSide, teamA, teamB } : m,
+      ),
+    }
+  }
+  return {
+    ...d,
+    matches: [
+      ...d.matches,
+      {
+        id: uid(),
+        date: P.date,
+        time: P.time,
+        venue: P.venue,
+        playersPerSide: P.perSide,
+        status: 'planned',
+        teamA,
+        teamB,
+        goals: [],
+        votingClosed: false,
+        createdAt: new Date().toISOString(),
+      },
+    ],
+  }
+}
+
+/** Yeni kurulum: gerçek takım kadrosu, hazır deneme hesapları ve planlanan MANU – BAY maçı. */
+export const createSeedData = (): AppData => withPresetMatch(withPresetAccounts(withRoster(emptyData())))
+
+export const emptyData = (): AppData => ({ version: 6, club: { name: CLUB_NAME }, accounts: [], players: [], matches: [], votes: [], currentUserId: null })

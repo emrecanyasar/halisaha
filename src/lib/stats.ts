@@ -97,6 +97,8 @@ export interface PlayerSummary {
   avgRating: number | null
   ovr: number | null
   attrs: Attributes | null
+  /** Özellikleri oluşturan oy sayısı */
+  attrVotes: number
   form: { match: Match; rating: number | null; result: 'G' | 'B' | 'M' }[]
 }
 
@@ -131,6 +133,7 @@ export const playerSummary = (data: AppData, player: Player): PlayerSummary => {
     avgRating: ratings.length ? round1(avg(ratings)) : null,
     ovr: pa ? overall(pa.attrs) : null,
     attrs: pa?.attrs ?? null,
+    attrVotes: pa?.votes ?? 0,
     form,
   }
 }

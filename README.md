@@ -7,16 +7,23 @@ Halısaha ekibimiz için Sofascore / Flashscore tarzı maç ve oyuncu takip uygu
 
 İlk açılışta takım kadrosu yüklü gelir; maç ve hesap yoktur. Herkes **Kayıt ol** ekranında kadrodaki kendi profilini seçerek hesap açar.
 
+Kayıtlı maç: **MANU – BAY**, 19 Kasım 2026 19:00, Haldun Alagaş Spor Kompleksi, 8v8.
+
 Hazır deneme hesabı: **Emre Can** → `emrecan@halisaha.app` / `123456`
 
 ## Özellikler
 
 - **Maçlar:** Yaklaşan / biten maç listesi, gün-saat-saha belirleme, takım adı ve rengi
-- **Kadro:** 5v5'ten 11v11'e kişi sayısı seçimi, dizilişler, sahada dokunarak oyuncu yerleştirme; oyuncuları sürükleyip istenen yere taşıma ("Dizilişe sıfırla" ile geri alınır)
+- **Kadro:** 5v5'ten 11v11'e kişi sayısı seçimi, dizilişler, sahada dokunarak oyuncu yerleştirme
+  - Oyuncuları sürükleyip istenen yere taşıma ("Dizilişe sıfırla" ile geri alınır)
+  - Orta sahayı geçen oyuncu diğer takıma geçer (boş yer yoksa en yakın oyuncuyla yer değiştirir)
+  - "Kadroda olmayanlar" listesinden sahaya sürükle-bırak
+  - Masaüstünde saha solda ekran yüksekliğinde, maç bilgileri ve ayarlar sağda
 - **Dengeli takım kur:** Gelecek oyuncuları seç, özellik puanlarına göre iki takıma adil dağıtılsın
 - **Skor:** Gol, golcü ve asist girişi
 - **Kapalı oylama:** Maç bitince oynayan herkes diğerlerine 1–10 puan ve isteğe bağlı özellik puanı verir. Kimin kime ne verdiği asla gösterilmez. Herkes oy verince ya da oylama kapatılınca ratingler açılır.
 - **Maç ratingleri:** Sofascore renk skalası, maçın oyuncusu (MVP), saha üzerinde rating rozetleri
+- **FIFA tarzı oyuncu kartı:** Genel puan, mevki ve 5 özellik; oylamalarla güncellenir. Puana göre Bronz / Gümüş / Altın / Elit
 - **Oyuncu profili:** Radar grafiği (Hücum, Teknik, Pas, Savunma, Fizik), genel puan, ortalama rating, son maçlar form grafiği, G/B/M, gol, asist, MVP
 - **Özellikler oylamadan hesaplanır:** Son maçlar daha ağır basar (yarı ömür 5 maç)
 - **Hesaplar:** Giriş, kayıt (ekipteki mevcut profili sahiplenme dahil), şifremi unuttum ekranı, hesabım (ad, e-posta, şifre değiştirme, çıkış). E-posta onayı yok.

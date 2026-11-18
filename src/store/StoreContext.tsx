@@ -1,9 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Account, AppData, Attributes, Foot, Goal, Match, PitchPos, Player, Position, TeamSide, Vote } from '../types'
 import { FORMATIONS } from '../lib/constants'
-import { CLUB_NAME, createSeedData, emptyData, withPresetAccounts, withRoster, withoutSamples } from '../lib/seed'
+import { CLUB_NAME, createSeedData, emptyData, withPresetAccounts, withPresetMatch, withRoster, withoutSamples } from '../lib/seed'
 import { uid } from '../lib/utils'
 import { hashPassword, normalizeEmail } from '../lib/auth'
+import { dropOnPitch, moveOnPitch } from '../lib/pitch'
 
 /**
  * Veri katmanı. Deneme sürümünde her şey tarayıcının localStorage'ında tutulur.
@@ -17,11 +18,12 @@ export const migrate = (raw: unknown): AppData | null => {
   const d = raw as Omit<Partial<AppData>, 'version'> & { version?: number }
   if (!d || !Array.isArray(d.players)) return null
   let out = d as unknown as AppData
-  if (d.version === 1) out = { ...out, version: 2 as unknown as 5, accounts: [], currentUserId: null }
-  if ((out.version as number) === 2) out = withRoster({ ...out, version: 3 as unknown as 5, club: { name: CLUB_NAME } })
-  if ((out.version as number) === 3) out = withoutSamples({ ...out, version: 4 as unknown as 5 })
-  if ((out.version as number) === 4) out = withPresetAccounts({ ...out, version: 5 })
-  return out.version === 5 ? out : null
+  if (d.version === 1) out = { ...out, version: 2 as unknown as 6, accounts: [], currentUserId: null }
+  if ((out.version as number) === 2) out = withRoster({ ...out, version: 3 as unknown as 6, club: { name: CLUB_NAME } })
+  if ((out.version as number) === 3) out = withoutSamples({ ...out, version: 4 as unknown as 6 })
+  if ((out.version as number) === 4) out = withPresetAccounts({ ...out, version: 5 as unknown as 6 })
+  if ((out.version as number) === 5) out = withPresetMatch({ ...out, version: 6 })
+  return out.version === 6 ? out : null
 }
 
 const load = (): AppData => {
@@ -200,6 +202,12 @@ const createActions = (set: (fn: (d: AppData) => AppData) => void, get: () => Ap
         return { ...m, [key]: { ...m[key], positions } }
       }),
     })),
+  /** Sahadaki oyuncuyu taşı; orta sahayı geçerse diğer takıma geçer */
+  moveOnPitch: (id: string, side: TeamSide, index: number, pos: PitchPos) =>
+    set((d) => ({ ...d, matches: d.matches.map((m) => (m.id === id ? moveOnPitch(m, side, index, pos) : m)) })),
+  /** Kadrodan sahaya sürüklenip bırakılan oyuncu */
+  dropOnPitch: (id: string, playerId: string, pos: PitchPos) =>
+    set((d) => ({ ...d, matches: d.matches.map((m) => (m.id === id ? dropOnPitch(m, playerId, pos) : m)) })),
   resetPositions: (id: string) =>
     set((d) => ({
       ...d,

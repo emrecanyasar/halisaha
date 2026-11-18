@@ -91,7 +91,7 @@ export interface Club {
 }
 
 export interface AppData {
-  version: 5
+  version: 6
   club: Club
   accounts: Account[]
   players: Player[]

@@ -1,6 +1,7 @@
-import { useRef, useState, type PointerEvent as RPointerEvent } from 'react'
+import { useRef, useState, type PointerEvent as RPointerEvent, type RefObject } from 'react'
 import type { Match, PitchPos, Player, TeamSide } from '../types'
 import { clamp, initials, ratingColor } from '../lib/utils'
+import { slotPos } from '../lib/pitch'
 
 interface Props {
   match: Match
@@ -12,21 +13,25 @@ interface Props {
   /** Oyuncu sürüklenip bırakıldığında yeni konum (saha yüzdesi) */
   onMove?: (side: TeamSide, index: number, pos: PitchPos) => void
   goalsBy?: Map<string, number>
+  /** Dışarıdan (kadro listesinden) bırakma hesabı için sahanın DOM referansı */
+  pitchRef?: RefObject<HTMLDivElement | null>
+  /** Masaüstü: saha ekran yüksekliğine sığacak kadar büyür */
+  fit?: boolean
+  /** Bırakma sırasında sahayı vurgula */
+  highlight?: boolean
 }
 
-/** Formasyondaki her slotun saha üzerindeki varsayılan konumu (yüzde). */
-export const formationLayout = (formation: number[], side: TeamSide) => {
-  const pos: PitchPos[] = []
-  const rows = formation.length
-  formation.forEach((count, row) => {
-    // A takımı alt yarı (kaleci en altta), B takımı üst yarı (kaleci en üstte)
-    const t = rows === 1 ? 0 : row / (rows - 1)
-    const yFromGoal = 7.5 + t * 35
-    const y = side === 'A' ? 100 - yFromGoal : yFromGoal
-    for (let i = 0; i < count; i++) pos.push({ x: ((i + 1) / (count + 1)) * 100, y })
-  })
-  return pos
+/** Ekran koordinatını saha yüzdesine çevirir */
+export const toPitchPercent = (el: HTMLElement, clientX: number, clientY: number): PitchPos => {
+  const r = el.getBoundingClientRect()
+  return {
+    x: clamp(((clientX - r.left) / r.width) * 100, 5, 95),
+    y: clamp(((clientY - r.top) / r.height) * 100, 4, 96),
+  }
 }
+
+/** Sahadaki etiket: kısa isimler tam ("Emre Can", "H. Turan"), uzunlarda ilk kelime */
+const shortName = (name: string) => (name.length <= 10 ? name : name.split(' ')[0]!)
 
 const DRAG_THRESHOLD = 6 // px: bundan az hareket "dokunma" sayılır
 
@@ -40,18 +45,13 @@ interface DragState {
   pos: PitchPos
 }
 
-export default function Pitch({ match, players, ratings, mvpId, editable, onSlotClick, onMove, goalsBy }: Props) {
-  const ref = useRef<HTMLDivElement>(null)
+export default function Pitch({ match, players, ratings, mvpId, editable, onSlotClick, onMove, goalsBy, pitchRef, fit, highlight }: Props) {
+  const innerRef = useRef<HTMLDivElement>(null)
+  const ref = pitchRef ?? innerRef
   const [drag, setDrag] = useState<DragState | null>(null)
   const sides: TeamSide[] = ['B', 'A']
 
-  const toPercent = (clientX: number, clientY: number): PitchPos => {
-    const r = ref.current!.getBoundingClientRect()
-    return {
-      x: clamp(((clientX - r.left) / r.width) * 100, 5, 95),
-      y: clamp(((clientY - r.top) / r.height) * 100, 4, 96),
-    }
-  }
+  const toPercent = (clientX: number, clientY: number): PitchPos => toPitchPercent(ref.current!, clientX, clientY)
 
   // Sürükleme durumu ref'te tutulur: hızlı dokunuşlarda React yeniden çizmeden pointerup gelebilir
   const dragRef = useRef<DragState | null>(null)
@@ -60,14 +60,21 @@ export default function Pitch({ match, players, ratings, mvpId, editable, onSlot
     setDrag(d)
   }
 
-  const onDown = (e: RPointerEvent, side: TeamSide, index: number, current: PitchPos) => {
+  const onDown = (e: RPointerEvent, side: TeamSide, index: number, current: PitchPos, filled: boolean) => {
     if (!editable) return
+    if (!filled) {
+      // Boş yerler sürüklenmez, dokununca seçim açılır
+      update({ key: `${side}-${index}`, side, index, startX: e.clientX, startY: e.clientY, moved: false, pos: current })
+      return
+    }
     ;(e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId)
     update({ key: `${side}-${index}`, side, index, startX: e.clientX, startY: e.clientY, moved: false, pos: current })
   }
   const onPointerMove = (e: RPointerEvent) => {
     const d = dragRef.current
     if (!d) return
+    const team = d.side === 'A' ? match.teamA : match.teamB
+    if (!team.slots[d.index]) return
     const moved = d.moved || Math.hypot(e.clientX - d.startX, e.clientY - d.startY) > DRAG_THRESHOLD
     if (!moved) return
     update({ ...d, moved, pos: toPercent(e.clientX, e.clientY) })
@@ -84,19 +91,23 @@ export default function Pitch({ match, players, ratings, mvpId, editable, onSlot
   return (
     <div
       ref={ref}
-      className="relative mx-auto aspect-[68/105] w-full max-w-md overflow-hidden rounded-2xl border border-line select-none"
-      style={{ background: 'repeating-linear-gradient(0deg, #15803d 0 10%, #166534 10% 20%)' }}
+      className={`relative mx-auto aspect-[68/105] overflow-hidden rounded-2xl border select-none transition-shadow [container-type:inline-size] ${
+        fit ? 'max-w-full' : 'w-full max-w-md'
+      } ${highlight ? 'border-brand shadow-[0_0_0_4px_rgba(22,163,74,.25)]' : 'border-line'}`}
+      style={{
+        background: 'repeating-linear-gradient(0deg, #15803d 0 10%, #166534 10% 20%)',
+        ...(fit ? { height: 'max(520px, calc(100vh - 10rem))' } : {}),
+      }}
     >
       <PitchLines />
       {sides.map((side) => {
         const team = side === 'A' ? match.teamA : match.teamB
-        const defaults = formationLayout(team.formation, side)
         return team.slots.map((pid, i) => {
           const key = `${side}-${i}`
           const p = pid ? players.get(pid) : undefined
           const r = pid ? ratings?.get(pid)?.rating : undefined
           const g = pid ? goalsBy?.get(pid) ?? 0 : 0
-          const base = team.positions?.[i] ?? defaults[i] ?? { x: 50, y: side === 'A' ? 75 : 25 }
+          const base = slotPos(team, side, i)
           const dragging = drag?.key === key && drag.moved
           const at = dragging ? drag.pos : base
           return (
@@ -105,12 +116,12 @@ export default function Pitch({ match, players, ratings, mvpId, editable, onSlot
               role={editable ? 'button' : undefined}
               tabIndex={editable ? 0 : undefined}
               aria-label={p ? p.name : 'Boş yer'}
-              onPointerDown={(e) => onDown(e, side, i, base)}
+              onPointerDown={(e) => onDown(e, side, i, base, !!pid)}
               onPointerMove={onPointerMove}
               onPointerUp={onUp}
               onPointerCancel={() => update(null)}
               onKeyDown={(e) => editable && (e.key === 'Enter' || e.key === ' ') && onSlotClick?.(side, i)}
-              className={`absolute flex w-[72px] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-0.5 ${
+              className={`absolute flex w-[clamp(64px,20cqw,96px)] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-0.5 ${
                 editable ? 'cursor-grab touch-none active:cursor-grabbing' : ''
               } ${dragging ? 'z-20 scale-110' : 'z-10 transition-[left,top] duration-200'}`}
               style={{ left: `${at.x}%`, top: `${at.y}%` }}
@@ -118,13 +129,13 @@ export default function Pitch({ match, players, ratings, mvpId, editable, onSlot
               <span className="relative">
                 {p ? (
                   <span
-                    className={`grid h-9 w-9 place-items-center rounded-full border-2 border-white/90 text-[13px] font-bold shadow-lg ${dragging ? 'ring-4 ring-white/40' : ''}`}
+                    className={`grid size-[clamp(36px,9.5cqw,52px)] place-items-center rounded-full border-2 border-white/90 text-[clamp(13px,3.6cqw,18px)] font-bold shadow-lg ${dragging ? 'ring-4 ring-white/40' : ''}`}
                     style={{ background: team.color, color: team.color === '#f8fafc' ? '#111' : '#fff' }}
                   >
                     {p.number || initials(p.name)}
                   </span>
                 ) : (
-                  <span className={`grid h-9 w-9 place-items-center rounded-full border-2 border-dashed border-white/60 text-lg text-white/80 ${editable ? 'bg-black/20 hover:bg-black/40' : 'bg-black/10'}`}>
+                  <span className={`grid size-[clamp(36px,9.5cqw,52px)] place-items-center rounded-full border-2 border-dashed border-white/60 text-lg text-white/80 ${editable ? 'bg-black/20 hover:bg-black/40' : 'bg-black/10'}`}>
                     +
                   </span>
                 )}
@@ -142,8 +153,8 @@ export default function Pitch({ match, players, ratings, mvpId, editable, onSlot
                   </span>
                 )}
               </span>
-              <span className="max-w-full truncate rounded bg-black/45 px-1.5 text-[11px] font-semibold leading-4 text-white">
-                {p ? p.name.split(' ')[0] : editable ? 'Ekle' : 'Boş'}
+              <span className="max-w-full truncate rounded bg-black/45 px-1.5 text-[clamp(11px,2.9cqw,14px)] font-semibold leading-[1.4] text-white">
+                {p ? shortName(p.name) : editable ? 'Ekle' : 'Boş'}
               </span>
             </div>
           )

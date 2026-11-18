@@ -2,6 +2,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useStore } from '../store/StoreContext'
 import { AttrBars, FormChart, RadarChart } from '../components/Charts'
 import { Avatar, EmptyState, Icon, PageHeader, RatingBadge, Stat } from '../components/ui'
+import PlayerCard from '../components/PlayerCard'
 import { POSITION_LABELS } from '../lib/constants'
 import { playerSummary, score, sideOf } from '../lib/stats'
 import { formatShortDate } from '../lib/utils'
@@ -23,6 +24,10 @@ export default function PlayerPage() {
 
   const profile = (
     <>
+        {/* FIFA tarzı kart */}
+        <div className="card overflow-hidden py-6" style={{ background: 'radial-gradient(120% 80% at 50% 0%, #e8f7ee 0%, #ffffff 60%)' }}>
+          <PlayerCard player={player} attrs={s.attrs} ovr={s.ovr} club={data.club.name} votes={s.attrVotes} />
+        </div>
         {/* Profil kartı */}
         <div className="card p-4">
           <div className="flex items-center gap-4">
@@ -32,9 +37,9 @@ export default function PlayerPage() {
               <div className="text-sm text-muted">{POSITION_LABELS[player.position]}</div>
               {data.currentUserId === player.id && <span className="mt-1 inline-block rounded-full bg-brand/15 px-2 py-0.5 text-[11px] font-semibold text-brand">Sen</span>}
             </div>
-            <div className="flex flex-col items-center">
-              <span className="text-3xl font-extrabold leading-none">{s.ovr ?? '–'}</span>
-              <span className="text-[10px] font-semibold uppercase text-muted">Genel</span>
+            <div className="flex flex-col items-center gap-1">
+              <RatingBadge value={s.avgRating} size="lg" />
+              <span className="text-[10px] font-semibold uppercase text-muted">Ort. rating</span>
             </div>
           </div>
           <div className="mt-4 grid grid-cols-5 gap-2 border-t border-line pt-4">

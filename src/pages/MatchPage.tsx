@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { usePlayerMap, useStore } from '../store/StoreContext'
-import Pitch from '../components/Pitch'
+import Pitch, { toPitchPercent } from '../components/Pitch'
 import { Avatar, ConfirmButton, EmptyState, Icon, PageHeader, RatingBadge, Sheet, Tabs } from '../components/ui'
 import { FORMATIONS, POSITION_LABELS, formationLabel } from '../lib/constants'
 import { balanceTeams, isRevealed, matchMvp, matchRatings, participants, playerSummary, score, votingProgress } from '../lib/stats'
-import { formatDayHeader } from '../lib/utils'
+import { formatDayHeader, initials } from '../lib/utils'
 import { useIsDesktop } from '../lib/hooks'
 import type { Match, TeamSide } from '../types'
 
@@ -29,28 +29,30 @@ export default function MatchPage() {
 
   const finished = match.status === 'finished'
 
-  // Masaüstü: solda maç başlığı + saha, sağda ratingler / bilgi
+  // Masaüstü: solda büyük saha, sağda maç kartı, kadro ayarları, kadro listesi ve sekmeler
   if (isDesktop) {
     const sideTab: Tab = tab === 'kadro' ? (finished ? 'ratingler' : 'bilgi') : tab
     return (
       <div>
         <PageHeader title={`${match.teamA.name} – ${match.teamB.name}`} />
-        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-6 px-4 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-          <div className="space-y-4">
-            <MatchHeader match={match} flush />
-            <LineupTab match={match} />
-          </div>
-          <div className="card sticky top-20 overflow-hidden">
-            <Tabs<Tab>
-              value={sideTab}
-              onChange={setTab}
-              tabs={[...(finished ? [{ id: 'ratingler' as const, label: 'Ratingler' }] : []), { id: 'bilgi', label: 'Bilgi' }]}
-            />
-            <div className="max-h-[calc(100vh-10rem)] overflow-y-auto p-4">
-              {sideTab === 'ratingler' && <RatingsTab match={match} />}
-              {sideTab === 'bilgi' && <InfoTab match={match} />}
-            </div>
-          </div>
+        <div className="px-4">
+          <LineupTab
+            match={match}
+            asideTop={<MatchHeader match={match} flush />}
+            asideBottom={
+              <div className="card overflow-hidden">
+                <Tabs<Tab>
+                  value={sideTab}
+                  onChange={setTab}
+                  tabs={[...(finished ? [{ id: 'ratingler' as const, label: 'Ratingler' }] : []), { id: 'bilgi', label: 'Bilgi' }]}
+                />
+                <div className="p-4">
+                  {sideTab === 'ratingler' && <RatingsTab match={match} />}
+                  {sideTab === 'bilgi' && <InfoTab match={match} />}
+                </div>
+              </div>
+            }
+          />
         </div>
       </div>
     )
@@ -147,12 +149,19 @@ function TeamBadge({ name, color }: { name: string; color: string }) {
   )
 }
 
-function LineupTab({ match }: { match: Match }) {
+/**
+ * Kadro sekmesi. `asideTop`/`asideBottom` verilirse (masaüstü) saha solda büyük,
+ * maç bilgisi, ayarlar ve kadro listesi sağ sütunda gösterilir.
+ */
+function LineupTab({ match, asideTop, asideBottom }: { match: Match; asideTop?: ReactNode; asideBottom?: ReactNode }) {
   const store = useStore()
   const { data } = store
   const players = usePlayerMap()
   const [picker, setPicker] = useState<{ side: TeamSide; index: number } | null>(null)
   const [balanceOpen, setBalanceOpen] = useState(false)
+  const pitchRef = useRef<HTMLDivElement>(null)
+  const [benchDrag, setBenchDrag] = useState<{ playerId: string; x: number; y: number; over: boolean } | null>(null)
+  const split = asideTop !== undefined
   const editable = match.status === 'planned'
   const hasCustom = [...(match.teamA.positions ?? []), ...(match.teamB.positions ?? [])].some(Boolean)
   const revealed = isRevealed(match, data.votes)
@@ -164,97 +173,186 @@ function LineupTab({ match }: { match: Match }) {
     return m
   }, [match.goals])
   const inMatch = new Set(participants(match))
-  const bench = data.players.filter((p) => !inMatch.has(p.id))
+  const bench = data.players.filter((p) => !inMatch.has(p.id)).sort((a, b) => a.name.localeCompare(b.name, 'tr'))
   const current = picker ? (picker.side === 'A' ? match.teamA : match.teamB).slots[picker.index] : null
 
-  return (
-    <div className="space-y-4">
-      {editable && (
-        <div className="card space-y-3 p-3">
-          <div>
-            <div className="label">Kişi sayısı (takım başı)</div>
-            <div className="flex gap-1.5 overflow-x-auto">
-              {Object.keys(FORMATIONS).map(Number).map((n) => (
-                <button
-                  key={n}
-                  onClick={() => store.setPlayersPerSide(match.id, n)}
-                  className={`min-w-10 flex-1 rounded-lg py-2 text-sm font-bold ${match.playersPerSide === n ? 'bg-brand text-white' : 'bg-surface-2'}`}
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            {(['A', 'B'] as const).map((side) => {
-              const team = side === 'A' ? match.teamA : match.teamB
-              return (
-                <div key={side}>
-                  <div className="label flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full" style={{ background: team.color }} /> {team.name} dizilişi
-                  </div>
-                  <select
-                    className="input py-2"
-                    value={team.formation.join(',')}
-                    onChange={(e) => store.setFormation(match.id, side, e.target.value.split(',').map(Number))}
-                  >
-                    {FORMATIONS[match.playersPerSide]!.map((f) => (
-                      <option key={f.join(',')} value={f.join(',')}>
-                        {formationLabel(f)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )
-            })}
-          </div>
-          <div className="flex gap-2">
-            <button className="btn-ghost flex-1" onClick={() => setBalanceOpen(true)}>
-              <Icon name="shuffle" size={16} /> Dengeli takım kur
-            </button>
+  // --- Kadro listesinden sahaya sürükle-bırak ---
+  const isOverPitch = (x: number, y: number) => {
+    const r = pitchRef.current?.getBoundingClientRect()
+    return !!r && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom
+  }
+  const startBenchDrag = (e: React.PointerEvent, playerId: string) => {
+    if (!editable) return
+    const startX = e.clientX
+    const startY = e.clientY
+    let active = false
+    const move = (ev: PointerEvent) => {
+      if (!active && Math.hypot(ev.clientX - startX, ev.clientY - startY) < 6) return
+      active = true
+      ev.preventDefault()
+      setBenchDrag({ playerId, x: ev.clientX, y: ev.clientY, over: isOverPitch(ev.clientX, ev.clientY) })
+    }
+    const up = (ev: PointerEvent) => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', cancel)
+      if (active && pitchRef.current && isOverPitch(ev.clientX, ev.clientY)) {
+        store.dropOnPitch(match.id, playerId, toPitchPercent(pitchRef.current, ev.clientX, ev.clientY))
+      }
+      setBenchDrag(null)
+    }
+    const cancel = () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', cancel)
+      setBenchDrag(null)
+    }
+    window.addEventListener('pointermove', move, { passive: false })
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', cancel)
+  }
+
+  const controls = editable && (
+    <div className="card space-y-3 p-3">
+      <div>
+        <div className="label">Kişi sayısı (takım başı)</div>
+        <div className="flex gap-1.5 overflow-x-auto">
+          {Object.keys(FORMATIONS).map(Number).map((n) => (
             <button
-              className="btn-ghost"
-              onClick={() => {
-                const empty = Array<string | null>(match.playersPerSide).fill(null)
-                store.setLineups(match.id, [...empty], [...empty])
-              }}
+              key={n}
+              onClick={() => store.setPlayersPerSide(match.id, n)}
+              className={`min-w-10 flex-1 rounded-lg py-2 text-sm font-bold ${match.playersPerSide === n ? 'bg-brand text-white' : 'bg-surface-2'}`}
             >
-              Temizle
+              {n}
             </button>
+          ))}
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {(['A', 'B'] as const).map((side) => {
+          const team = side === 'A' ? match.teamA : match.teamB
+          return (
+            <div key={side}>
+              <div className="label flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full ring-1 ring-black/10" style={{ background: team.color }} /> {team.name} dizilişi
+              </div>
+              <select
+                className="input py-2"
+                value={team.formation.join(',')}
+                onChange={(e) => store.setFormation(match.id, side, e.target.value.split(',').map(Number))}
+              >
+                {FORMATIONS[match.playersPerSide]!.map((f) => (
+                  <option key={f.join(',')} value={f.join(',')}>
+                    {formationLabel(f)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )
+        })}
+      </div>
+      <div className="flex gap-2">
+        <button className="btn-ghost flex-1" onClick={() => setBalanceOpen(true)}>
+          <Icon name="shuffle" size={16} /> Dengeli takım kur
+        </button>
+        <button
+          className="btn-ghost"
+          onClick={() => {
+            const empty = Array<string | null>(match.playersPerSide).fill(null)
+            store.setLineups(match.id, [...empty], [...empty])
+          }}
+        >
+          Temizle
+        </button>
+      </div>
+    </div>
+  )
+
+  const benchList = bench.length > 0 && (
+    <div>
+      <div className="section-title flex items-center justify-between">
+        <span>Kadroda olmayanlar ({bench.length})</span>
+        {editable && <span className="normal-case tracking-normal">Sahaya sürükle</span>}
+      </div>
+      <div className={`card flex gap-2 p-3 ${split ? 'flex-wrap' : 'overflow-x-auto'}`}>
+        {bench.map((p) => (
+          <span
+            key={p.id}
+            onPointerDown={(e) => startBenchDrag(e, p.id)}
+            className={`flex shrink-0 select-none items-center gap-1.5 rounded-full border border-line bg-surface py-1 pl-1 pr-3 text-xs font-medium ${
+              editable ? 'cursor-grab touch-pan-x hover:border-brand active:cursor-grabbing' : ''
+            } ${benchDrag?.playerId === p.id ? 'opacity-40' : ''}`}
+          >
+            <span className="grid h-6 w-6 place-items-center rounded-full bg-surface-2 text-[10px] font-bold">{p.number || initials(p.name)}</span>
+            {p.name}
+            <span className="text-muted">{p.position}</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+
+  const hint = editable && (
+    <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center text-xs text-muted">
+      <span>Dokun: ekle / değiştir · Sürükle: yerini değiştir · Orta sahayı geçen diğer takıma geçer</span>
+      {hasCustom && (
+        <button className="font-semibold text-brand" onClick={() => store.resetPositions(match.id)}>
+          Dizilişe sıfırla
+        </button>
+      )}
+    </div>
+  )
+
+  const pitch = (
+    <Pitch
+      match={match}
+      players={players}
+      editable={editable}
+      pitchRef={pitchRef}
+      fit={split}
+      highlight={!!benchDrag?.over}
+      onSlotClick={(side, index) => setPicker({ side, index })}
+      onMove={(side, index, pos) => store.moveOnPitch(match.id, side, index, pos)}
+      ratings={revealed ? ratings : undefined}
+      mvpId={revealed ? mvp?.playerId : null}
+      goalsBy={goalsBy}
+    />
+  )
+
+  const dragged = benchDrag ? players.get(benchDrag.playerId) : undefined
+
+  return (
+    <>
+      {split ? (
+        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-6">
+          <div className="sticky top-20 space-y-2">
+            {pitch}
+            {hint}
+          </div>
+          <div className="min-w-0 space-y-4">
+            {asideTop}
+            {controls}
+            {benchList}
+            {asideBottom}
           </div>
         </div>
-      )}
-
-      <Pitch
-        match={match}
-        players={players}
-        editable={editable}
-        onSlotClick={(side, index) => setPicker({ side, index })}
-        onMove={(side, index, pos) => store.setSlotPosition(match.id, side, index, pos)}
-        ratings={revealed ? ratings : undefined}
-        mvpId={revealed ? mvp?.playerId : null}
-        goalsBy={goalsBy}
-      />
-      {editable && (
-        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center text-xs text-muted">
-          <span>Dokun: oyuncu ekle / değiştir · Basılı tutup sürükle: yerini değiştir</span>
-          {hasCustom && (
-            <button className="font-semibold text-brand" onClick={() => store.resetPositions(match.id)}>
-              Dizilişe sıfırla
-            </button>
-          )}
+      ) : (
+        <div className="space-y-4">
+          {controls}
+          {pitch}
+          {hint}
+          {benchList}
         </div>
       )}
 
-      {bench.length > 0 && (
-        <div>
-          <div className="section-title">Kadroda olmayanlar ({bench.length})</div>
-          <div className="card flex flex-wrap gap-2 p-3">
-            {bench.map((p) => (
-              <span key={p.id} className="rounded-full bg-surface-2 px-2.5 py-1 text-xs">
-                {p.name} <span className="text-muted">· {p.position}</span>
-              </span>
-            ))}
+      {/* Sürüklenen oyuncunun parmağı takip eden görüntüsü */}
+      {benchDrag && dragged && (
+        <div className="pointer-events-none fixed z-[60] -translate-x-1/2 -translate-y-1/2" style={{ left: benchDrag.x, top: benchDrag.y }}>
+          <div className={`flex flex-col items-center gap-0.5 transition-transform ${benchDrag.over ? 'scale-110' : ''}`}>
+            <span className="grid h-11 w-11 place-items-center rounded-full border-2 border-white bg-brand text-sm font-bold text-white shadow-xl">
+              {dragged.number || initials(dragged.name)}
+            </span>
+            <span className="rounded bg-black/70 px-1.5 text-[11px] font-semibold text-white">{dragged.name}</span>
           </div>
         </div>
       )}
@@ -308,7 +406,7 @@ function LineupTab({ match }: { match: Match }) {
       </Sheet>
 
       <BalanceSheet match={match} open={balanceOpen} onClose={() => setBalanceOpen(false)} />
-    </div>
+    </>
   )
 }
 
