@@ -91,8 +91,8 @@ export default function SettingsPage() {
           <button onClick={() => fileRef.current?.click()} className="w-full px-4 py-3 text-left text-sm hover:bg-surface-2">Yedeği içe aktar</button>
           <button onClick={copyData} className="w-full px-4 py-3 text-left text-sm hover:bg-surface-2">Yedeği panoya kopyala</button>
           <div className="p-2">
-            <ConfirmButton className="w-full rounded-lg px-2 py-1 text-left text-sm hover:bg-surface-2" question="Mevcut veriler silinip örnek veri yüklenecek. Emin misin?" onConfirm={store.loadSeed}>
-              Örnek veriyi yükle
+            <ConfirmButton className="w-full rounded-lg px-2 py-1 text-left text-sm hover:bg-surface-2" question="Tüm maçlar, oylar ve hesaplar silinip sadece takım kadrosu yüklenecek. Emin misin?" onConfirm={store.loadSeed}>
+              Sıfırla: sadece takım kadrosuyla başla
             </ConfirmButton>
           </div>
           <div className="p-2">

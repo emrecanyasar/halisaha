@@ -5,7 +5,7 @@
 Halısaha ekibimiz için Sofascore / Flashscore tarzı maç ve oyuncu takip uygulaması.
 Şu an **deneme sürümü**: veriler tarayıcıda (localStorage) tutuluyor, giriş/kayıt da bu cihazda çalışıyor.
 
-Deneme hesabı: `can@halisaha.app` / `123456`
+İlk açılışta takım kadrosu yüklü gelir; maç ve hesap yoktur. Herkes **Kayıt ol** ekranında kadrodaki kendi profilini seçerek hesap açar.
 
 ## Özellikler
 
@@ -44,7 +44,7 @@ src/
   types.ts               Veri modeli (Player, Match, Vote...)
   store/StoreContext.tsx Veri katmanı (şimdilik localStorage)
   lib/stats.ts           Rating, özellik, istatistik, dengeli takım hesapları
-  lib/seed.ts            Örnek veri
+  lib/seed.ts            Takım kadrosu ve ilk kurulum verisi
   lib/constants.ts       Dizilişler, etiketler, renkler
   components/            Saha, grafikler, ortak UI
   pages/                 Ekranlar
