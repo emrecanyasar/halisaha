@@ -40,13 +40,13 @@ export default function MatchPage() {
             <MatchHeader match={match} flush />
             <LineupTab match={match} />
           </div>
-          <div className="card sticky top-4 overflow-hidden">
+          <div className="card sticky top-20 overflow-hidden">
             <Tabs<Tab>
               value={sideTab}
               onChange={setTab}
               tabs={[...(finished ? [{ id: 'ratingler' as const, label: 'Ratingler' }] : []), { id: 'bilgi', label: 'Bilgi' }]}
             />
-            <div className="max-h-[calc(100vh-7rem)] overflow-y-auto p-4">
+            <div className="max-h-[calc(100vh-10rem)] overflow-y-auto p-4">
               {sideTab === 'ratingler' && <RatingsTab match={match} />}
               {sideTab === 'bilgi' && <InfoTab match={match} />}
             </div>

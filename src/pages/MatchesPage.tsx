@@ -118,7 +118,7 @@ function Highlights() {
   const mvp = lastRevealed ? matchMvp(lastRevealed, data.votes) : null
   const mvpPlayer = mvp ? data.players.find((p) => p.id === mvp.playerId) : undefined
   return (
-    <aside className="sticky top-4 hidden space-y-4 pt-4 lg:block">
+    <aside className="sticky top-16 hidden space-y-4 pt-4 lg:block">
       {mvp && mvpPlayer && lastRevealed && (
         <Link to={`/mac/${lastRevealed.id}`} className="card block p-4" style={{ background: 'linear-gradient(135deg, rgba(55,77,245,.10), #ffffff 70%)' }}>
           <div className="text-xs font-semibold uppercase tracking-wider text-blue-700">⭐ Son maçın oyuncusu</div>

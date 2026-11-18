@@ -18,7 +18,7 @@ Deneme hesabı: `can@halisaha.app` / `123456`
 - **Oyuncu profili:** Radar grafiği (Hücum, Teknik, Pas, Savunma, Fizik), genel puan, ortalama rating, son maçlar form grafiği, G/B/M, gol, asist, MVP
 - **Özellikler oylamadan hesaplanır:** Son maçlar daha ağır basar (yarı ömür 5 maç)
 - **Hesaplar:** Giriş, kayıt (ekipteki mevcut profili sahiplenme dahil), şifremi unuttum ekranı, hesabım (ad, e-posta, şifre değiştirme, çıkış). E-posta onayı yok.
-- **Tasarım:** Açık (beyaz) tema; mobilde alt menü, masaüstünde sol kenar çubuğu ve iki sütunlu sayfalar
+- **Tasarım:** Açık (beyaz) tema; mobilde alt menü, masaüstünde menülü üst başlık ve iki sütunlu sayfalar
 - **Takım kadrosu:** 22 kişilik gerçek kadro (forma no, beden, kaleciler) hazır yüklü; Ayarlar'dan takım adı değişir, eksik kadro yeniden eklenebilir
 - **Yedekleme:** JSON olarak dışa / içe aktarma
 

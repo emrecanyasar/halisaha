@@ -9,21 +9,24 @@ const NAV = [
   { to: '/ayarlar', label: 'Ayarlar', icon: 'settings', end: false },
 ]
 
-function Logo() {
+function Logo({ club }: { club?: string }) {
   return (
-    <Link to="/" className="flex items-center gap-2 font-extrabold tracking-tight">
-      <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand text-white">
+    <Link to="/" className="flex items-center gap-2.5 font-extrabold tracking-tight">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-brand text-white">
         <Icon name="ball" size={18} />
       </span>
-      <span className="text-lg">
-        Halı<span className="text-brand">saha</span>
+      <span className="flex flex-col leading-tight">
+        <span className="text-lg">
+          Halı<span className="text-brand">saha</span>
+        </span>
+        {club && <span className="max-w-56 truncate text-[11px] font-medium text-muted">{club}</span>}
       </span>
     </Link>
   )
 }
 
 /** Uygulama çerçevesi. Giriş yapılmadıysa giriş sayfasına yönlendirir.
- *  Mobil: üst bar + alt menü. Masaüstü (lg+): sol kenar çubuğu. */
+ *  Mobil: üst bar + alt menü. Masaüstü (lg+): menülü üst başlık. */
 export default function Layout() {
   const { data } = useStore()
   const me = data.players.find((p) => p.id === data.currentUserId)
@@ -35,75 +38,74 @@ export default function Layout() {
   if (!me) return <Navigate to="/giris" replace state={{ from: pathname }} />
 
   return (
-    <div className="min-h-screen lg:flex">
-      {/* Masaüstü kenar çubuğu */}
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-line bg-surface px-4 py-5 lg:flex">
-        <div className="px-2">
-          <Logo />
-          <div className="mt-1 truncate pl-10 text-xs font-medium text-muted">{data.club.name}</div>
-        </div>
-        <Link to="/mac/yeni" className="btn-primary mt-6">
-          <Icon name="plus" size={18} /> Maç oluştur
-        </Link>
-        <nav className="mt-6 space-y-1">
-          {NAV.map((n) => (
-            <NavLink
-              key={n.to}
-              to={n.to}
-              end={n.end}
-              className={({ isActive }) =>
-                `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
-                  isActive ? 'bg-brand-soft text-brand' : 'text-muted hover:bg-surface-2 hover:text-ink'
-                }`
-              }
-            >
-              <Icon name={n.icon} size={20} />
-              {n.label}
-            </NavLink>
-          ))}
-        </nav>
-        <Link to="/profil" className="mt-auto flex items-center gap-3 rounded-xl border border-line p-2.5 hover:bg-surface-2">
-          <Avatar player={me} size={36} color="#16a34a" />
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-semibold">{me.name}</div>
-            <div className="text-xs text-muted">Hesabım</div>
+    <div className="flex min-h-screen flex-col">
+      <header className="sticky top-0 z-40 border-b border-line bg-surface/90 backdrop-blur">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-6 px-4 lg:h-16 lg:px-6">
+          <div className="lg:hidden">
+            <Logo />
           </div>
-        </Link>
-      </aside>
+          <div className="hidden lg:block">
+            <Logo club={data.club.name} />
+          </div>
 
-      <div className="flex min-h-screen flex-1 flex-col">
-        {/* Mobil üst bar */}
-        <header className="sticky top-0 z-40 flex items-center justify-between border-b border-line bg-surface/90 px-4 py-3 backdrop-blur lg:hidden">
-          <Logo />
-          <Link to="/profil" className="flex items-center gap-2 rounded-full bg-surface-2 py-1 pl-3 pr-1 text-xs">
-            <span className="max-w-28 truncate font-medium">{me.name}</span>
-            <Avatar player={me} size={26} color="#16a34a" />
-          </Link>
-        </header>
-
-        <main className="mx-auto w-full max-w-2xl flex-1 pb-24 lg:max-w-6xl lg:px-6 lg:pb-10 lg:pt-2">
-          <Outlet />
-        </main>
-
-        {/* Mobil alt menü */}
-        <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
-          <div className="mx-auto flex max-w-2xl">
+          {/* Masaüstü menü */}
+          <nav className="hidden flex-1 items-center gap-1 lg:flex">
             {NAV.map((n) => (
               <NavLink
                 key={n.to}
                 to={n.to}
                 end={n.end}
                 className={({ isActive }) =>
-                  `flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium ${isActive ? 'text-brand' : 'text-muted'}`
+                  `relative flex h-16 items-center gap-2 px-3 text-sm font-semibold transition ${
+                    isActive ? 'text-brand' : 'text-muted hover:text-ink'
+                  }`
                 }
               >
-                <Icon name={n.icon} size={22} />
-                {n.label}
+                {({ isActive }) => (
+                  <>
+                    <Icon name={n.icon} size={18} />
+                    {n.label}
+                    {isActive && <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-brand" />}
+                  </>
+                )}
               </NavLink>
             ))}
+          </nav>
+
+          <div className="flex items-center gap-3">
+            <Link to="/mac/yeni" className="btn-primary hidden py-2 lg:inline-flex">
+              <Icon name="plus" size={18} /> Maç oluştur
+            </Link>
+            <Link to="/profil" className="flex items-center gap-2 rounded-full bg-surface-2 py-1 pl-3 pr-1 text-xs hover:bg-line lg:text-sm">
+              <span className="max-w-28 truncate font-medium lg:max-w-40">{me.name}</span>
+              <Avatar player={me} size={28} color="#16a34a" />
+            </Link>
           </div>
-        </nav>
-      </div>
+        </div>
+      </header>
+
+      <main className="mx-auto w-full max-w-2xl flex-1 pb-24 lg:max-w-6xl lg:px-6 lg:pb-10 lg:pt-2">
+        <Outlet />
+      </main>
+
+      {/* Mobil alt menü */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
+        <div className="mx-auto flex max-w-2xl">
+          {NAV.map((n) => (
+            <NavLink
+              key={n.to}
+              to={n.to}
+              end={n.end}
+              className={({ isActive }) =>
+                `flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium ${isActive ? 'text-brand' : 'text-muted'}`
+              }
+            >
+              <Icon name={n.icon} size={22} />
+              {n.label}
+            </NavLink>
+          ))}
+        </div>
+      </nav>
     </div>
   )
 }
