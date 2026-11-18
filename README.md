@@ -1,7 +1,9 @@
 # Halısaha ⚽
 
 Halısaha ekibimiz için Sofascore / Flashscore tarzı maç ve oyuncu takip uygulaması.
-Şu an **deneme sürümü**: giriş sistemi yok, veriler tarayıcıda (localStorage) tutuluyor.
+Şu an **deneme sürümü**: veriler tarayıcıda (localStorage) tutuluyor, giriş/kayıt da bu cihazda çalışıyor.
+
+Deneme hesabı: `can@halisaha.app` / `123456`
 
 ## Özellikler
 
@@ -13,7 +15,11 @@ Halısaha ekibimiz için Sofascore / Flashscore tarzı maç ve oyuncu takip uygu
 - **Maç ratingleri:** Sofascore renk skalası, maçın oyuncusu (MVP), saha üzerinde rating rozetleri
 - **Oyuncu profili:** Radar grafiği (Hücum, Teknik, Pas, Savunma, Fizik), genel puan, ortalama rating, son maçlar form grafiği, G/B/M, gol, asist, MVP
 - **Özellikler oylamadan hesaplanır:** Son maçlar daha ağır basar (yarı ömür 5 maç)
+- **Hesaplar:** Giriş, kayıt (ekipteki mevcut profili sahiplenme dahil), şifremi unuttum ekranı, hesabım (ad, e-posta, şifre değiştirme, çıkış). E-posta onayı yok.
+- **Tasarım:** Açık (beyaz) tema; mobilde alt menü, masaüstünde sol kenar çubuğu ve iki sütunlu sayfalar
 - **Yedekleme:** JSON olarak dışa / içe aktarma
+
+> ⚠️ Şifreler şimdilik tarayıcıda SHA-256 özetiyle saklanıyor. Bu gerçek bir güvenlik sağlamaz; ortak sunucuya (Supabase Auth vb.) geçince yerini sunucu tarafı kimlik doğrulama alacak.
 
 ## Kurulum
 
@@ -39,12 +45,15 @@ src/
   lib/constants.ts       Dizilişler, etiketler, renkler
   components/            Saha, grafikler, ortak UI
   pages/                 Ekranlar
+  pages/auth/            Giriş, kayıt, şifremi unuttum
+  lib/auth.ts            Şifre özeti, e-posta doğrulama, şifre gücü
 ```
 
 ## Yol haritası
 
 - [ ] Backend (Supabase önerilir): ortak veri, herkes kendi telefonundan oy versin
-- [ ] Kullanıcı girişi (telefon / Google), "Ben kimim" seçiminin kalkması
+- [x] Giriş / kayıt / şifremi unuttum sayfaları (arayüz + yerel çalışma)
+- [ ] Gerçek kimlik doğrulama (Supabase Auth), Google ile giriş, şifre sıfırlama e-postası
 - [ ] Maç davet / katılım (geliyorum / gelmiyorum)
 - [ ] Bildirimler (oy verme hatırlatması)
 - [ ] Mobil uygulama (React Native / Expo, ya da PWA ile başlangıç)

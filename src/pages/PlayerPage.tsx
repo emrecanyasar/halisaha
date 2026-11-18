@@ -5,11 +5,13 @@ import { Avatar, EmptyState, Icon, PageHeader, RatingBadge, Stat } from '../comp
 import { POSITION_LABELS } from '../lib/constants'
 import { playerSummary, score, sideOf } from '../lib/stats'
 import { formatShortDate } from '../lib/utils'
+import { useIsDesktop } from '../lib/hooks'
 
 export default function PlayerPage() {
   const { id } = useParams()
   const { data } = useStore()
   const player = data.players.find((p) => p.id === id)
+  const isDesktop = useIsDesktop()
   if (!player)
     return (
       <div className="p-4">
@@ -19,17 +21,8 @@ export default function PlayerPage() {
     )
   const s = playerSummary(data, player)
 
-  return (
-    <div>
-      <PageHeader
-        title={player.name}
-        right={
-          <Link to={`/oyuncu/${player.id}/duzenle`} className="rounded-full p-2 hover:bg-surface-2" aria-label="Düzenle">
-            <Icon name="edit" />
-          </Link>
-        }
-      />
-      <div className="space-y-4 px-4">
+  const profile = (
+    <>
         {/* Profil kartı */}
         <div className="card p-4">
           <div className="flex items-center gap-4">
@@ -52,6 +45,10 @@ export default function PlayerPage() {
           </div>
         </div>
 
+      </>
+  )
+  const radar = (
+    <>
         {/* Radar + ortalama rating */}
         <div className="card p-4">
           <div className="flex items-center justify-between">
@@ -69,12 +66,20 @@ export default function PlayerPage() {
           </div>
         </div>
 
+      </>
+  )
+  const formCard = (
+    <>
         {/* Form */}
         <div className="card p-4">
           <h2 className="mb-3 font-bold">Son maçlar</h2>
           <FormChart form={s.form} />
         </div>
 
+      </>
+  )
+  const stats = (
+    <>
         {/* İstatistik */}
         <div className="card grid grid-cols-3 gap-y-4 p-4">
           <Stat label="Galibiyet" value={s.wins} />
@@ -85,6 +90,10 @@ export default function PlayerPage() {
           <Stat label="Maçın oyuncusu" value={s.mvps} />
         </div>
 
+      </>
+  )
+  const history = (
+    <>
         {/* Maç listesi */}
         {s.form.length > 0 && (
           <div>
@@ -111,7 +120,40 @@ export default function PlayerPage() {
             </div>
           </div>
         )}
-      </div>
+      </>
+  )
+
+  return (
+    <div>
+      <PageHeader
+        title={player.name}
+        right={
+          <Link to={`/oyuncu/${player.id}/duzenle`} className="rounded-full p-2 hover:bg-surface-2" aria-label="Düzenle">
+            <Icon name="edit" />
+          </Link>
+        }
+      />
+      {isDesktop ? (
+        <div className="grid grid-cols-2 items-start gap-6 px-4">
+          <div className="space-y-4">
+            {profile}
+            {stats}
+            {history}
+          </div>
+          <div className="space-y-4">
+            {radar}
+            {formCard}
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4 px-4">
+          {profile}
+          {radar}
+          {formCard}
+          {stats}
+          {history}
+        </div>
+      )}
     </div>
   )
 }

@@ -21,7 +21,7 @@ export default function MatchRow({ match, votes, currentUserId }: { match: Match
   return (
     <Link to={`/mac/${match.id}`} className="flex items-center gap-3 px-4 py-3 transition hover:bg-surface-2">
       <div className="flex w-12 shrink-0 flex-col items-center text-xs">
-        <span className={finished ? 'text-muted' : 'font-semibold text-white'}>{match.time}</span>
+        <span className={finished ? 'text-muted' : 'font-semibold text-ink'}>{match.time}</span>
         <span className={`mt-0.5 text-[10px] font-semibold ${finished ? 'text-muted' : 'text-brand'}`}>{finished ? 'MS' : `${match.playersPerSide}v${match.playersPerSide}`}</span>
       </div>
       <div className="flex-1 space-y-1.5 border-l border-line pl-3">
@@ -35,7 +35,7 @@ export default function MatchRow({ match, votes, currentUserId }: { match: Match
           </span>
         )}
         {finished && !revealed && (
-          <span className={`rounded-full px-2 py-0.5 font-semibold ${needsMyVote ? 'bg-amber-500/15 text-amber-400' : 'bg-surface-2 text-muted'}`}>
+          <span className={`rounded-full px-2 py-0.5 font-semibold ${needsMyVote ? 'bg-amber-100 text-amber-700' : 'bg-surface-2 text-muted'}`}>
             {needsMyVote ? 'Oy ver' : `Oylama ${prog.done.length}/${prog.total}`}
           </span>
         )}

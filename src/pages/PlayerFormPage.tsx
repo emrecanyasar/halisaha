@@ -43,7 +43,7 @@ export default function PlayerFormPage() {
             <label className="label">Mevki</label>
             <div className="grid grid-cols-4 gap-1.5">
               {(Object.keys(POSITION_LABELS) as Position[]).map((p) => (
-                <button type="button" key={p} onClick={() => setF({ ...f, position: p })} className={`rounded-xl py-2 text-xs font-semibold ${f.position === p ? 'bg-brand text-black' : 'bg-surface-2'}`}>
+                <button type="button" key={p} onClick={() => setF({ ...f, position: p })} className={`rounded-xl py-2 text-xs font-semibold ${f.position === p ? 'bg-brand text-white' : 'bg-surface-2'}`}>
                   {POSITION_LABELS[p]}
                 </button>
               ))}

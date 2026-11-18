@@ -6,6 +6,7 @@ import { Avatar, ConfirmButton, EmptyState, Icon, PageHeader, RatingBadge, Sheet
 import { FORMATIONS, POSITION_LABELS, formationLabel } from '../lib/constants'
 import { balanceTeams, isRevealed, matchMvp, matchRatings, participants, playerSummary, score, votingProgress } from '../lib/stats'
 import { formatDayHeader } from '../lib/utils'
+import { useIsDesktop } from '../lib/hooks'
 import type { Match, TeamSide } from '../types'
 
 type Tab = 'kadro' | 'ratingler' | 'bilgi'
@@ -16,6 +17,7 @@ export default function MatchPage() {
   const { data } = store
   const match = data.matches.find((m) => m.id === id)
   const [tab, setTab] = useState<Tab>(match?.status === 'finished' ? 'ratingler' : 'kadro')
+  const isDesktop = useIsDesktop()
 
   if (!match)
     return (
@@ -26,6 +28,34 @@ export default function MatchPage() {
     )
 
   const finished = match.status === 'finished'
+
+  // Masaüstü: solda maç başlığı + saha, sağda ratingler / bilgi
+  if (isDesktop) {
+    const sideTab: Tab = tab === 'kadro' ? (finished ? 'ratingler' : 'bilgi') : tab
+    return (
+      <div>
+        <PageHeader title={`${match.teamA.name} – ${match.teamB.name}`} />
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-6 px-4 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+          <div className="space-y-4">
+            <MatchHeader match={match} flush />
+            <LineupTab match={match} />
+          </div>
+          <div className="card sticky top-4 overflow-hidden">
+            <Tabs<Tab>
+              value={sideTab}
+              onChange={setTab}
+              tabs={[...(finished ? [{ id: 'ratingler' as const, label: 'Ratingler' }] : []), { id: 'bilgi', label: 'Bilgi' }]}
+            />
+            <div className="max-h-[calc(100vh-7rem)] overflow-y-auto p-4">
+              {sideTab === 'ratingler' && <RatingsTab match={match} />}
+              {sideTab === 'bilgi' && <InfoTab match={match} />}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div>
       <PageHeader title={`${match.teamA.name} – ${match.teamB.name}`} />
@@ -50,13 +80,13 @@ export default function MatchPage() {
   )
 }
 
-function MatchHeader({ match }: { match: Match }) {
+function MatchHeader({ match, flush = false }: { match: Match; flush?: boolean }) {
   const players = usePlayerMap()
   const s = score(match)
   const finished = match.status === 'finished'
   const goalsFor = (side: TeamSide) => match.goals.filter((g) => g.team === side)
   return (
-    <div className="mx-4 card p-4">
+    <div className={`card p-4 ${flush ? '' : 'mx-4'}`}>
       <div className="text-center text-xs capitalize text-muted">
         {formatDayHeader(match.date)} · {match.time}
         {match.venue && <div className="mt-0.5 normal-case">{match.venue}</div>}
@@ -109,7 +139,7 @@ function MatchHeader({ match }: { match: Match }) {
 function TeamBadge({ name, color }: { name: string; color: string }) {
   return (
     <div className="flex flex-col items-center gap-2 text-center">
-      <span className="grid h-12 w-12 place-items-center rounded-2xl text-xl font-extrabold text-white shadow-lg" style={{ background: color, color: color === '#f8fafc' ? '#111' : '#fff' }}>
+      <span className="grid h-12 w-12 place-items-center rounded-2xl text-xl font-extrabold text-white shadow-md ring-1 ring-black/5" style={{ background: color, color: color === '#f8fafc' ? '#111' : '#fff' }}>
         {name[0]}
       </span>
       <span className="line-clamp-2 text-sm font-semibold">{name}</span>
@@ -147,7 +177,7 @@ function LineupTab({ match }: { match: Match }) {
                 <button
                   key={n}
                   onClick={() => store.setPlayersPerSide(match.id, n)}
-                  className={`min-w-10 flex-1 rounded-lg py-2 text-sm font-bold ${match.playersPerSide === n ? 'bg-brand text-black' : 'bg-surface-2'}`}
+                  className={`min-w-10 flex-1 rounded-lg py-2 text-sm font-bold ${match.playersPerSide === n ? 'bg-brand text-white' : 'bg-surface-2'}`}
                 >
                   {n}
                 </button>
@@ -223,7 +253,7 @@ function LineupTab({ match }: { match: Match }) {
           <div className="space-y-1">
             {current && (
               <button
-                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-red-400 hover:bg-surface-2"
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-red-600 hover:bg-surface-2"
                 onClick={() => {
                   store.assignSlot(match.id, picker.side, picker.index, null)
                   setPicker(null)
@@ -255,7 +285,7 @@ function LineupTab({ match }: { match: Match }) {
                       <div className="text-sm font-semibold">{p.name}</div>
                       <div className="text-xs text-muted">
                         {POSITION_LABELS[p.position]}
-                        {where && <span className="text-amber-400"> · {where} kadrosunda (yer değiştirir)</span>}
+                        {where && <span className="text-amber-600"> · {where} kadrosunda (yer değiştirir)</span>}
                       </div>
                     </div>
                     <span className="text-xs font-bold text-muted">{s.ovr ?? '–'}</span>
@@ -294,7 +324,7 @@ function BalanceSheet({ match, open, onClose }: { match: Match; open: boolean; o
           const on = selected.has(p.id)
           return (
             <button key={p.id} onClick={() => toggle(p.id)} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left ${on ? 'bg-brand/10' : 'hover:bg-surface-2'}`}>
-              <span className={`grid h-5 w-5 place-items-center rounded-md border ${on ? 'border-brand bg-brand text-black' : 'border-line'}`}>
+              <span className={`grid h-5 w-5 place-items-center rounded-md border ${on ? 'border-brand bg-brand text-white' : 'border-line'}`}>
                 {on && <Icon name="check" size={14} />}
               </span>
               <span className="flex-1 text-sm">{p.name}</span>
@@ -418,10 +448,10 @@ function RatingsTab({ match }: { match: Match }) {
   return (
     <div className="space-y-4">
       {mvp && mvpPlayer && (
-        <Link to={`/oyuncu/${mvp.playerId}`} className="card flex items-center gap-4 p-4" style={{ background: 'linear-gradient(135deg, rgba(55,77,245,.25), rgba(20,26,38,1) 60%)' }}>
+        <Link to={`/oyuncu/${mvp.playerId}`} className="card flex items-center gap-4 p-4" style={{ background: 'linear-gradient(135deg, rgba(55,77,245,.12), #ffffff 65%)' }}>
           <Avatar player={mvpPlayer} size={52} color="#374df5" />
           <div className="flex-1">
-            <div className="text-xs font-semibold uppercase tracking-wider text-blue-300">⭐ Maçın oyuncusu</div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-blue-700">⭐ Maçın oyuncusu</div>
             <div className="text-lg font-bold">{mvpPlayer.name}</div>
           </div>
           <RatingBadge value={mvp.rating} size="lg" />

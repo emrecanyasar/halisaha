@@ -19,11 +19,11 @@ export function RadarChart({ attrs, size = 260 }: { attrs: Attributes | null; si
   return (
     <svg viewBox={`0 0 ${size} ${size}`} className="w-full max-w-[280px]" role="img" aria-label="Oyuncu özellikleri">
       {[1, 0.75, 0.5, 0.25].map((f) => (
-        <polygon key={f} points={ring(f)} fill={f === 1 ? '#1c2433' : 'none'} stroke="#2e3a52" strokeWidth={1} />
+        <polygon key={f} points={ring(f)} fill={f === 1 ? '#f6f7fa' : 'none'} stroke="#dfe3ea" strokeWidth={1} />
       ))}
       {ATTR_KEYS.map((_, i) => {
         const [x, y] = point(i, R)
-        return <line key={i} x1={c} y1={c} x2={x} y2={y} stroke="#2e3a52" strokeWidth={1} />
+        return <line key={i} x1={c} y1={c} x2={x} y2={y} stroke="#dfe3ea" strokeWidth={1} />
       })}
       {attrs && <polygon points={shape} fill="rgba(34,197,94,.35)" stroke="#22c55e" strokeWidth={2} strokeLinejoin="round" />}
       {ATTR_KEYS.map((k, i) => {
@@ -31,10 +31,10 @@ export function RadarChart({ attrs, size = 260 }: { attrs: Attributes | null; si
         const v = attrs?.[k]
         return (
           <g key={k} transform={`translate(${x},${y})`}>
-            <text textAnchor="middle" y={-4} fontSize={11} fontWeight={600} fill="#8b95a8">
+            <text textAnchor="middle" y={-4} fontSize={11} fontWeight={600} fill="#6b7280">
               {ATTR_LABELS[k].short}
             </text>
-            <rect x={-14} y={2} width={28} height={18} rx={4} fill={v != null ? attrColor(v) : '#263044'} />
+            <rect x={-14} y={2} width={28} height={18} rx={4} fill={v != null ? attrColor(v) : '#cbd2dc'} />
             <text textAnchor="middle" y={15} fontSize={11} fontWeight={700} fill="#fff">
               {v ?? '–'}
             </text>

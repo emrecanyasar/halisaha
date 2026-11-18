@@ -37,7 +37,7 @@ export default function PlayersPage() {
           <button
             key={s.id}
             onClick={() => setSort(s.id)}
-            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${sort === s.id ? 'bg-white text-black' : 'bg-surface-2 text-muted'}`}
+            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${sort === s.id ? 'bg-ink text-white' : 'bg-surface-2 text-muted'}`}
           >
             {s.label}
           </button>
@@ -61,7 +61,7 @@ export default function PlayersPage() {
                 <RatingBadge value={r.avgRating} size="sm" />
                 <span
                   className="grid h-9 w-9 place-items-center rounded-lg text-sm font-extrabold"
-                  style={{ background: r.ovr != null ? attrColor(r.ovr) + '33' : '#1c2433', color: r.ovr != null ? attrColor(r.ovr) : '#8b95a8' }}
+                  style={{ background: r.ovr != null ? attrColor(r.ovr) + '33' : '#eef0f4', color: r.ovr != null ? attrColor(r.ovr) : '#6b7280' }}
                   title="Genel puan (özelliklerin ortalaması)"
                 >
                   {r.ovr ?? '–'}

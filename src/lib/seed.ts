@@ -1,6 +1,11 @@
-import { ATTR_KEYS, type AppData, type Attributes, type Goal, type Match, type Player, type Position, type Vote } from '../types'
+import { ATTR_KEYS, type Account, type AppData, type Attributes, type Goal, type Match, type Player, type Position, type Vote } from '../types'
 import { FORMATIONS } from './constants'
 import { clamp, parseDate, seededRandom, toISODate, todayISO, uid } from './utils'
+
+export const DEMO_EMAIL = 'can@halisaha.app'
+export const DEMO_PASSWORD = '123456'
+/** sha256('halisaha:can@halisaha.app:123456') */
+const DEMO_HASH = 'cde87ad24d8fae48b451edc761acbb2c36390abfbf8a9f89c7d34b4b505de012'
 
 /** Deneme amaçlı örnek veri. Ayarlar > "Örnek veriyi yükle" ile tekrar yüklenebilir. */
 const SEED_PLAYERS: [string, Position, number, Player['foot'], Partial<Attributes>][] = [
@@ -100,7 +105,11 @@ export const createSeedData = (): AppData => {
     }
   }
 
-  return { version: 1, players, matches, votes, currentUserId: players[3]!.id }
+  // Deneme hesabı: can@halisaha.app / 123456
+  const accounts: Account[] = [
+    { id: uid(), email: DEMO_EMAIL, passwordHash: DEMO_HASH, playerId: players[3]!.id, createdAt: now },
+  ]
+  return { version: 2, accounts, players, matches, votes, currentUserId: null }
 }
 
-export const emptyData = (): AppData => ({ version: 1, players: [], matches: [], votes: [], currentUserId: null })
+export const emptyData = (): AppData => ({ version: 2, accounts: [], players: [], matches: [], votes: [], currentUserId: null })

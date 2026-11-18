@@ -59,11 +59,24 @@ export interface Vote {
   createdAt: string
 }
 
+/**
+ * Deneme sürümü hesabı. Şifre tarayıcıda SHA-256 ile özetlenip saklanır.
+ * Bu GERÇEK bir güvenlik değildir; backend'e (ör. Supabase Auth) geçince kalkacak.
+ */
+export interface Account {
+  id: string
+  email: string
+  passwordHash: string
+  playerId: string
+  createdAt: string
+}
+
 export interface AppData {
-  version: 1
+  version: 2
+  accounts: Account[]
   players: Player[]
   matches: Match[]
   votes: Vote[]
-  /** Giriş sistemi gelene kadar "ben kimim" seçimi */
+  /** Oturum açmış kullanıcının oyuncu kimliği (null = çıkış yapılmış) */
   currentUserId: string | null
 }

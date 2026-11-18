@@ -56,7 +56,7 @@ export default function NewMatchPage() {
                 type="button"
                 key={n}
                 onClick={() => set('playersPerSide', n)}
-                className={`rounded-xl py-2.5 text-sm font-bold transition ${form.playersPerSide === n ? 'bg-brand text-black' : 'bg-surface-2 text-white hover:bg-line'}`}
+                className={`rounded-xl py-2.5 text-sm font-bold transition ${form.playersPerSide === n ? 'bg-brand text-white' : 'bg-surface-2 text-white hover:bg-line'}`}
               >
                 {n}
               </button>

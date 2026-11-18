@@ -21,7 +21,7 @@ export function Avatar({ player, size = 40, color }: { player: Pick<Player, 'nam
   const bg = color ?? '#334155'
   return (
     <span
-      className="inline-flex shrink-0 items-center justify-center rounded-full font-bold text-white ring-2 ring-white/10"
+      className="inline-flex shrink-0 items-center justify-center rounded-full font-bold text-white ring-2 ring-black/5"
       style={{ width: size, height: size, background: `linear-gradient(135deg, ${bg}, ${bg}aa)`, fontSize: size * 0.38 }}
     >
       {player ? initials(player.name) : '?'}
@@ -52,7 +52,7 @@ export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: { id: 
           key={t.id}
           onClick={() => onChange(t.id)}
           className={`relative flex shrink-0 items-center gap-1.5 px-3 py-3 text-sm font-semibold transition ${
-            value === t.id ? 'text-white' : 'text-muted hover:text-white'
+            value === t.id ? 'text-ink' : 'text-muted hover:text-ink'
           }`}
         >
           {t.label}
@@ -74,7 +74,7 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
   if (!open) return null
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative max-h-[85vh] w-full max-w-lg overflow-hidden rounded-t-3xl border border-line bg-surface sm:rounded-3xl">
         <div className="flex items-center justify-between border-b border-line px-5 py-4">
           <h2 className="font-bold">{title}</h2>
@@ -161,7 +161,7 @@ export function ConfirmButton({ children, question, onConfirm, className = 'btn-
         <button type="button" className="btn-ghost flex-1" onClick={() => setAsking(false)}>Vazgeç</button>
         <button
           type="button"
-          className={`btn flex-1 ${danger ? 'bg-red-600 text-white' : 'bg-brand text-black'}`}
+          className={`btn flex-1 ${danger ? 'bg-red-600 text-white' : 'bg-brand text-white'}`}
           onClick={() => {
             setAsking(false)
             onConfirm()

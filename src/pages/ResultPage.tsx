@@ -46,7 +46,7 @@ export default function ResultPage() {
                 <div className="flex items-center gap-4">
                   <button className="grid h-10 w-10 place-items-center rounded-full bg-surface-2 text-xl" onClick={() => removeLast(side)} aria-label="Gol sil">−</button>
                   <span className="w-10 text-center text-4xl font-extrabold tabular-nums">{count(side)}</span>
-                  <button className="grid h-10 w-10 place-items-center rounded-full bg-brand text-xl text-black" onClick={() => addGoal(side)} aria-label="Gol ekle">+</button>
+                  <button className="grid h-10 w-10 place-items-center rounded-full bg-brand text-xl text-white" onClick={() => addGoal(side)} aria-label="Gol ekle">+</button>
                 </div>
               </div>
             )

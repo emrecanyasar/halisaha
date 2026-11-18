@@ -1,8 +1,9 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import type { AppData, Attributes, Goal, Match, Player, TeamSide, Vote } from '../types'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import type { Account, AppData, Attributes, Foot, Goal, Match, Player, Position, TeamSide, Vote } from '../types'
 import { FORMATIONS } from '../lib/constants'
 import { createSeedData, emptyData } from '../lib/seed'
 import { uid } from '../lib/utils'
+import { hashPassword, normalizeEmail } from '../lib/auth'
 
 /**
  * Veri katmanı. Deneme sürümünde her şey tarayıcının localStorage'ında tutulur.
@@ -11,12 +12,21 @@ import { uid } from '../lib/utils'
  */
 const STORAGE_KEY = 'halisaha:v1'
 
+/** Eski kayıtları güncel sürüme taşır. */
+export const migrate = (raw: unknown): AppData | null => {
+  const d = raw as Omit<Partial<AppData>, 'version'> & { version?: number }
+  if (!d || !Array.isArray(d.players)) return null
+  if (d.version === 1) return { ...(d as unknown as AppData), version: 2, accounts: [], currentUserId: null }
+  if (d.version === 2) return d as unknown as AppData
+  return null
+}
+
 const load = (): AppData => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
-      const parsed = JSON.parse(raw) as AppData
-      if (parsed.version === 1) return parsed
+      const parsed = migrate(JSON.parse(raw))
+      if (parsed) return parsed
     }
   } catch {
     /* depolama kullanılamıyor olabilir */
@@ -45,7 +55,65 @@ const resizeSlots = (slots: (string | null)[], n: number) => {
   return s
 }
 
-const createActions = (set: (fn: (d: AppData) => AppData) => void) => ({
+export type AuthResult = { ok: true } | { ok: false; error: string }
+
+export interface RegisterInput {
+  name: string
+  email: string
+  password: string
+  /** Ekipte zaten var olan, hesabı olmayan bir oyuncu profilini sahiplenmek için */
+  claimPlayerId: string | null
+  position: Position
+  number: number
+  foot: Foot
+}
+
+const createActions = (set: (fn: (d: AppData) => AppData) => void, get: () => AppData) => ({
+  // ---- Oturum (deneme sürümü: her şey bu cihazda) ----
+  login: async (email: string, password: string): Promise<AuthResult> => {
+    const e = normalizeEmail(email)
+    const acc = get().accounts.find((a) => a.email === e)
+    if (!acc || acc.passwordHash !== (await hashPassword(e, password))) return { ok: false, error: 'E-posta ya da şifre hatalı.' }
+    set((d) => ({ ...d, currentUserId: acc.playerId }))
+    return { ok: true }
+  },
+  register: async (input: RegisterInput): Promise<AuthResult> => {
+    const e = normalizeEmail(input.email)
+    const d0 = get()
+    if (d0.accounts.some((a) => a.email === e)) return { ok: false, error: 'Bu e-posta ile zaten bir hesap var.' }
+    if (input.claimPlayerId && d0.accounts.some((a) => a.playerId === input.claimPlayerId))
+      return { ok: false, error: 'Bu oyuncu profili başka bir hesaba bağlı.' }
+    const passwordHash = await hashPassword(e, input.password)
+    const now = new Date().toISOString()
+    const playerId = input.claimPlayerId ?? uid()
+    const account: Account = { id: uid(), email: e, passwordHash, playerId, createdAt: now }
+    set((d) => ({
+      ...d,
+      accounts: [...d.accounts, account],
+      players: input.claimPlayerId
+        ? d.players.map((p) => (p.id === playerId ? { ...p, name: input.name.trim() || p.name } : p))
+        : [...d.players, { id: playerId, name: input.name.trim(), position: input.position, number: input.number, foot: input.foot, createdAt: now }],
+      currentUserId: playerId,
+    }))
+    return { ok: true }
+  },
+  logout: () => set((d) => ({ ...d, currentUserId: null })),
+  updateEmail: (playerId: string, email: string): AuthResult => {
+    const e = normalizeEmail(email)
+    const d0 = get()
+    if (d0.accounts.some((a) => a.email === e && a.playerId !== playerId)) return { ok: false, error: 'Bu e-posta başka bir hesapta kullanılıyor.' }
+    set((d) => ({ ...d, accounts: d.accounts.map((a) => (a.playerId === playerId ? { ...a, email: e } : a)) }))
+    return { ok: true }
+  },
+  changePassword: async (playerId: string, current: string, next: string): Promise<AuthResult> => {
+    const acc = get().accounts.find((a) => a.playerId === playerId)
+    if (!acc) return { ok: false, error: 'Hesap bulunamadı.' }
+    if (acc.passwordHash !== (await hashPassword(acc.email, current))) return { ok: false, error: 'Mevcut şifre hatalı.' }
+    const passwordHash = await hashPassword(acc.email, next)
+    set((d) => ({ ...d, accounts: d.accounts.map((a) => (a.id === acc.id ? { ...a, passwordHash } : a)) }))
+    return { ok: true }
+  },
+
   setCurrentUser: (id: string | null) => set((d) => ({ ...d, currentUserId: id })),
 
   addPlayer: (p: Omit<Player, 'id' | 'createdAt'>) => {
@@ -65,6 +133,7 @@ const createActions = (set: (fn: (d: AppData) => AppData) => void) => ({
         teamB: { ...m.teamB, slots: m.teamB.slots.map((s) => (s === id ? null : s)) },
       })),
       votes: d.votes.filter((v) => v.voterId !== id && v.targetId !== id),
+      accounts: d.accounts.filter((a) => a.playerId !== id),
       currentUserId: d.currentUserId === id ? null : d.currentUserId,
     })),
 
@@ -182,11 +251,13 @@ const Ctx = createContext<Store | null>(null)
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<AppData>(load)
+  const ref = useRef(data)
+  ref.current = data
   useEffect(() => {
     save(data)
   }, [data])
   const set = useCallback((fn: (d: AppData) => AppData) => setData(fn), [])
-  const actions = useMemo(() => createActions(set), [set])
+  const actions = useMemo(() => createActions(set, () => ref.current), [set])
   const value = useMemo(() => ({ data, ...actions }), [data, actions])
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

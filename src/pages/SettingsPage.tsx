@@ -1,7 +1,6 @@
 import { useRef, useState } from 'react'
-import { useStore } from '../store/StoreContext'
+import { migrate, useStore } from '../store/StoreContext'
 import { Avatar, ConfirmButton, Icon } from '../components/ui'
-import type { AppData } from '../types'
 
 export default function SettingsPage() {
   const store = useStore()
@@ -29,9 +28,9 @@ export default function SettingsPage() {
 
   const importData = async (file: File) => {
     try {
-      const parsed = JSON.parse(await file.text()) as AppData
-      if (parsed.version !== 1 || !Array.isArray(parsed.players)) throw new Error()
-      store.replaceAll(parsed)
+      const parsed = migrate(JSON.parse(await file.text()))
+      if (!parsed) throw new Error()
+      store.replaceAll({ ...parsed, currentUserId: data.currentUserId })
       setMsg('Veriler içe aktarıldı.')
     } catch {
       setMsg('Dosya okunamadı. Geçerli bir Halısaha yedeği seç.')
@@ -39,15 +38,16 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6 p-4">
+    <div className="space-y-6 p-4 lg:max-w-2xl">
       <h1 className="text-2xl font-extrabold">Ayarlar</h1>
 
       <section>
-        <div className="section-title">Ben kimim?</div>
+        <div className="section-title">Test: başka oyuncu olarak geç</div>
         <p className="mb-2 px-1 text-xs text-muted">
-          Deneme sürümünde giriş yok. Oy verirken kim olduğunu buradan seç. (Giriş sistemi eklenince bu adım kalkacak.)
+          Veriler şimdilik sadece bu cihazda olduğu için, oylamayı denemek için şifresiz olarak başka bir oyuncunun yerine geçebilirsin.
+          Ortak sunucuya geçince bu bölüm kalkacak.
         </p>
-        <div className="card max-h-80 divide-y divide-line overflow-y-auto">
+        <div className="card max-h-80 divide-y lg:max-h-[28rem] divide-line overflow-y-auto">
           {data.players.map((p) => (
             <button key={p.id} onClick={() => store.setCurrentUser(p.id)} className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-surface-2">
               <Avatar player={p} size={32} />
@@ -76,7 +76,7 @@ export default function SettingsPage() {
             </ConfirmButton>
           </div>
           <div className="p-2">
-            <ConfirmButton danger className="w-full rounded-lg px-2 py-1 text-left text-sm text-red-400 hover:bg-surface-2" question="Tüm oyuncular, maçlar ve oylar silinecek. Emin misin?" onConfirm={store.clearAll}>
+            <ConfirmButton danger className="w-full rounded-lg px-2 py-1 text-left text-sm text-red-600 hover:bg-surface-2" question="Tüm oyuncular, maçlar ve oylar silinecek. Emin misin?" onConfirm={store.clearAll}>
               Her şeyi sil (sıfırdan başla)
             </ConfirmButton>
           </div>
@@ -86,8 +86,8 @@ export default function SettingsPage() {
       </section>
 
       <section className="px-1 text-xs text-muted">
-        <div>Halısaha v0.1 · deneme sürümü</div>
-        <div>{data.players.length} oyuncu · {data.matches.length} maç · {data.votes.length} oy</div>
+        <div>Halısaha v0.2 · deneme sürümü</div>
+        <div>{data.accounts.length} hesap · {data.players.length} oyuncu · {data.matches.length} maç · {data.votes.length} oy</div>
       </section>
     </div>
   )
