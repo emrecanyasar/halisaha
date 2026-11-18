@@ -40,6 +40,7 @@ export default function Layout() {
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-line bg-surface px-4 py-5 lg:flex">
         <div className="px-2">
           <Logo />
+          <div className="mt-1 truncate pl-10 text-xs font-medium text-muted">{data.club.name}</div>
         </div>
         <Link to="/mac/yeni" className="btn-primary mt-6">
           <Icon name="plus" size={18} /> Maç oluştur

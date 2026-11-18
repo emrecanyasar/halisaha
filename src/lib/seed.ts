@@ -1,6 +1,50 @@
-import { ATTR_KEYS, type Account, type AppData, type Attributes, type Goal, type Match, type Player, type Position, type Vote } from '../types'
+import { ATTR_KEYS, type Account, type AppData, type ShirtSize, type Attributes, type Goal, type Match, type Player, type Position, type Vote } from '../types'
 import { FORMATIONS } from './constants'
 import { clamp, parseDate, seededRandom, toISODate, todayISO, uid } from './utils'
+
+export const CLUB_NAME = 'Manchester United Siyah Elit'
+
+/** Gerçek takım kadrosu: [isim, forma no, beden, mevki]. Mevkiler (kaleciler hariç) sonradan düzenlenebilir. */
+export const ROSTER: [string, number, ShirtSize | undefined, Position][] = [
+  ['H. Turan', 61, 'L', 'OS'],
+  ['Bakar', 11, 'L', 'OS'],
+  ['Nejdet', 56, 'L', 'OS'],
+  ['Eren', 7, 'L', 'OS'],
+  ['Barış', 87, 'L', 'OS'],
+  ['Kadir', 8, 'L', 'OS'],
+  ['Oz', 37, 'L', 'OS'],
+  ['Turgut', 15, 'L', 'OS'],
+  ['Demir', 9, 'L', 'OS'],
+  ['Mert', 19, 'L', 'OS'],
+  ['Kahraman', 18, 'XL', 'OS'],
+  ['Emre Can', 13, 'XL', 'OS'],
+  ['Enes', 10, 'XL', 'OS'],
+  ['Salih', 6, 'XL', 'OS'],
+  ['Alperen', 17, 'XL', 'KL'],
+  ['Semih', 16, 'XL', 'OS'],
+  ['Taştekin', 25, 'XL', 'KL'],
+  ['Emre', 53, 'XL', 'OS'],
+  ['Kor', 34, 'XXL', 'OS'],
+  ['Zafer', 0, undefined, 'OS'],
+  ['Caner', 0, undefined, 'OS'],
+  ['Neşe', 0, undefined, 'KL'],
+]
+
+const sameName = (a: string, b: string) => a.toLocaleLowerCase('tr').replace(/\s+/g, ' ').trim() === b.toLocaleLowerCase('tr').replace(/\s+/g, ' ').trim()
+
+/** Kadrodaki oyunculardan eksik olanları ekler (isimle karşılaştırır, var olanlara dokunmaz). */
+export const withRoster = (d: AppData): AppData => {
+  const now = new Date().toISOString()
+  const missing = ROSTER.filter(([name]) => !d.players.some((p) => sameName(p.name, name)))
+  if (!missing.length) return d
+  return {
+    ...d,
+    players: [
+      ...d.players,
+      ...missing.map(([name, number, size, position]): Player => ({ id: uid(), name, number, size, position, foot: 'Sağ', createdAt: now })),
+    ],
+  }
+}
 
 export const DEMO_EMAIL = 'can@halisaha.app'
 export const DEMO_PASSWORD = '123456'
@@ -109,7 +153,7 @@ export const createSeedData = (): AppData => {
   const accounts: Account[] = [
     { id: uid(), email: DEMO_EMAIL, passwordHash: DEMO_HASH, playerId: players[3]!.id, createdAt: now },
   ]
-  return { version: 2, accounts, players, matches, votes, currentUserId: null }
+  return withRoster({ version: 3, club: { name: CLUB_NAME }, accounts, players, matches, votes, currentUserId: null })
 }
 
-export const emptyData = (): AppData => ({ version: 2, accounts: [], players: [], matches: [], votes: [], currentUserId: null })
+export const emptyData = (): AppData => ({ version: 3, club: { name: CLUB_NAME }, accounts: [], players: [], matches: [], votes: [], currentUserId: null })

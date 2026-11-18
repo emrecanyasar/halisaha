@@ -1,5 +1,7 @@
 # Halısaha ⚽
 
+**Manchester United Siyah Elit** ekibi için.
+
 Halısaha ekibimiz için Sofascore / Flashscore tarzı maç ve oyuncu takip uygulaması.
 Şu an **deneme sürümü**: veriler tarayıcıda (localStorage) tutuluyor, giriş/kayıt da bu cihazda çalışıyor.
 
@@ -8,7 +10,7 @@ Deneme hesabı: `can@halisaha.app` / `123456`
 ## Özellikler
 
 - **Maçlar:** Yaklaşan / biten maç listesi, gün-saat-saha belirleme, takım adı ve rengi
-- **Kadro:** 5v5'ten 11v11'e kişi sayısı seçimi, dizilişler, saha üzerinde dokunarak oyuncu yerleştirme, yer değiştirme
+- **Kadro:** 5v5'ten 11v11'e kişi sayısı seçimi, dizilişler, sahada dokunarak oyuncu yerleştirme; oyuncuları sürükleyip istenen yere taşıma ("Dizilişe sıfırla" ile geri alınır)
 - **Dengeli takım kur:** Gelecek oyuncuları seç, özellik puanlarına göre iki takıma adil dağıtılsın
 - **Skor:** Gol, golcü ve asist girişi
 - **Kapalı oylama:** Maç bitince oynayan herkes diğerlerine 1–10 puan ve isteğe bağlı özellik puanı verir. Kimin kime ne verdiği asla gösterilmez. Herkes oy verince ya da oylama kapatılınca ratingler açılır.
@@ -17,6 +19,7 @@ Deneme hesabı: `can@halisaha.app` / `123456`
 - **Özellikler oylamadan hesaplanır:** Son maçlar daha ağır basar (yarı ömür 5 maç)
 - **Hesaplar:** Giriş, kayıt (ekipteki mevcut profili sahiplenme dahil), şifremi unuttum ekranı, hesabım (ad, e-posta, şifre değiştirme, çıkış). E-posta onayı yok.
 - **Tasarım:** Açık (beyaz) tema; mobilde alt menü, masaüstünde sol kenar çubuğu ve iki sütunlu sayfalar
+- **Takım kadrosu:** 22 kişilik gerçek kadro (forma no, beden, kaleciler) hazır yüklü; Ayarlar'dan takım adı değişir, eksik kadro yeniden eklenebilir
 - **Yedekleme:** JSON olarak dışa / içe aktarma
 
 > ⚠️ Şifreler şimdilik tarayıcıda SHA-256 özetiyle saklanıyor. Bu gerçek bir güvenlik sağlamaz; ortak sunucuya (Supabase Auth vb.) geçince yerini sunucu tarafı kimlik doğrulama alacak.

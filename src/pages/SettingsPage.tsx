@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { migrate, useStore } from '../store/StoreContext'
+import { ROSTER, withRoster } from '../lib/seed'
 import { Avatar, ConfirmButton, Icon } from '../components/ui'
 
 export default function SettingsPage() {
@@ -40,6 +41,25 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6 p-4 lg:max-w-2xl">
       <h1 className="text-2xl font-extrabold">Ayarlar</h1>
+
+      <section>
+        <div className="section-title">Takım</div>
+        <div className="card space-y-3 p-4">
+          <div>
+            <label className="label" htmlFor="club">Takım adı</label>
+            <input id="club" className="input" value={data.club.name} onChange={(e) => store.setClubName(e.target.value)} />
+          </div>
+          <button className="btn-ghost w-full" onClick={() => {
+            const before = data.players.length
+            store.replaceAll(withRoster(data))
+            const added = withRoster(data).players.length - before
+            setMsg(added ? `${added} oyuncu kadroya eklendi.` : 'Kadrodaki herkes zaten ekli.')
+          }}>
+            {ROSTER.length} kişilik takım kadrosundan eksikleri ekle
+          </button>
+          {msg && <p className="text-xs text-brand">{msg}</p>}
+        </div>
+      </section>
 
       <section>
         <div className="section-title">Test: başka oyuncu olarak geç</div>

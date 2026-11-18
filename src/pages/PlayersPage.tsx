@@ -55,7 +55,7 @@ export default function PlayersPage() {
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-semibold">{r.player.name}</div>
                   <div className="text-xs text-muted">
-                    {POSITION_LABELS[r.player.position]} · {r.matches} maç · {r.goals} gol{r.mvps > 0 && ` · ⭐${r.mvps}`}
+                    {r.player.number ? `#${r.player.number} · ` : ''}{POSITION_LABELS[r.player.position]} · {r.matches} maç · {r.goals} gol{r.mvps > 0 && ` · ⭐${r.mvps}`}
                   </div>
                 </div>
                 <RatingBadge value={r.avgRating} size="sm" />

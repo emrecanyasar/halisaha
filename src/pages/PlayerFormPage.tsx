@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useStore } from '../store/StoreContext'
 import { ConfirmButton, Icon, PageHeader } from '../components/ui'
 import { POSITION_LABELS } from '../lib/constants'
-import type { Foot, Position } from '../types'
+import { SHIRT_SIZES, type Foot, type Position, type ShirtSize } from '../types'
 
 export default function PlayerFormPage() {
   const { id } = useParams()
@@ -15,6 +15,7 @@ export default function PlayerFormPage() {
     position: existing?.position ?? ('OS' as Position),
     number: existing?.number ?? 0,
     foot: existing?.foot ?? ('Sağ' as Foot),
+    size: existing?.size as ShirtSize | undefined,
   })
 
   const submit = (e: React.FormEvent) => {
@@ -49,7 +50,7 @@ export default function PlayerFormPage() {
               ))}
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="label">Forma no</label>
               <input type="number" min={0} max={99} className="input" value={f.number || ''} onChange={(e) => setF({ ...f, number: Number(e.target.value) })} />
@@ -60,6 +61,15 @@ export default function PlayerFormPage() {
                 <option>Sağ</option>
                 <option>Sol</option>
                 <option>İki</option>
+              </select>
+            </div>
+            <div>
+              <label className="label">Beden</label>
+              <select className="input" value={f.size ?? ''} onChange={(e) => setF({ ...f, size: (e.target.value || undefined) as ShirtSize | undefined })}>
+                <option value="">–</option>
+                {SHIRT_SIZES.map((s) => (
+                  <option key={s}>{s}</option>
+                ))}
               </select>
             </div>
           </div>

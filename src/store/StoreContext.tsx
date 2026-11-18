@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import type { Account, AppData, Attributes, Foot, Goal, Match, Player, Position, TeamSide, Vote } from '../types'
+import type { Account, AppData, Attributes, Foot, Goal, Match, PitchPos, Player, Position, TeamSide, Vote } from '../types'
 import { FORMATIONS } from '../lib/constants'
-import { createSeedData, emptyData } from '../lib/seed'
+import { CLUB_NAME, createSeedData, emptyData, withRoster } from '../lib/seed'
 import { uid } from '../lib/utils'
 import { hashPassword, normalizeEmail } from '../lib/auth'
 
@@ -16,9 +16,10 @@ const STORAGE_KEY = 'halisaha:v1'
 export const migrate = (raw: unknown): AppData | null => {
   const d = raw as Omit<Partial<AppData>, 'version'> & { version?: number }
   if (!d || !Array.isArray(d.players)) return null
-  if (d.version === 1) return { ...(d as unknown as AppData), version: 2, accounts: [], currentUserId: null }
-  if (d.version === 2) return d as unknown as AppData
-  return null
+  let out = d as unknown as AppData
+  if (d.version === 1) out = { ...out, version: 2 as unknown as 3, accounts: [], currentUserId: null }
+  if ((out.version as number) === 2) out = withRoster({ ...out, version: 3, club: { name: CLUB_NAME } })
+  return out.version === 3 ? out : null
 }
 
 const load = (): AppData => {
@@ -170,8 +171,8 @@ const createActions = (set: (fn: (d: AppData) => AppData) => void, get: () => Ap
         return {
           ...m,
           playersPerSide: n,
-          teamA: { ...m.teamA, formation, slots: resizeSlots(m.teamA.slots, n) },
-          teamB: { ...m.teamB, formation, slots: resizeSlots(m.teamB.slots, n) },
+          teamA: { ...m.teamA, formation, slots: resizeSlots(m.teamA.slots, n), positions: [] },
+          teamB: { ...m.teamB, formation, slots: resizeSlots(m.teamB.slots, n), positions: [] },
         }
       }),
     })),
@@ -181,9 +182,31 @@ const createActions = (set: (fn: (d: AppData) => AppData) => void, get: () => Ap
       matches: d.matches.map((m) => {
         if (m.id !== id) return m
         const key = side === 'A' ? 'teamA' : 'teamB'
-        return { ...m, [key]: { ...m[key], formation } }
+        return { ...m, [key]: { ...m[key], formation, positions: [] } }
       }),
     })),
+  /** Sahada sürüklenen oyuncunun yeni konumu (null = dizilişteki yerine dön) */
+  setSlotPosition: (id: string, side: TeamSide, index: number, pos: PitchPos | null) =>
+    set((d) => ({
+      ...d,
+      matches: d.matches.map((m) => {
+        if (m.id !== id) return m
+        const key = side === 'A' ? 'teamA' : 'teamB'
+        const positions = [...(m[key].positions ?? [])]
+        while (positions.length < m[key].slots.length) positions.push(null)
+        positions[index] = pos
+        return { ...m, [key]: { ...m[key], positions } }
+      }),
+    })),
+  resetPositions: (id: string) =>
+    set((d) => ({
+      ...d,
+      matches: d.matches.map((m) =>
+        m.id === id ? { ...m, teamA: { ...m.teamA, positions: [] }, teamB: { ...m.teamB, positions: [] } } : m,
+      ),
+    })),
+  setClubName: (name: string) => set((d) => ({ ...d, club: { ...d.club, name } })),
+
   /** Bir slota oyuncu koyar. Oyuncu başka bir slottaysa yer değiştirirler. */
   assignSlot: (id: string, side: TeamSide, index: number, playerId: string | null) =>
     set((d) => ({

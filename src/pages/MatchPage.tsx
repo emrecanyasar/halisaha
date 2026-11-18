@@ -154,6 +154,7 @@ function LineupTab({ match }: { match: Match }) {
   const [picker, setPicker] = useState<{ side: TeamSide; index: number } | null>(null)
   const [balanceOpen, setBalanceOpen] = useState(false)
   const editable = match.status === 'planned'
+  const hasCustom = [...(match.teamA.positions ?? []), ...(match.teamB.positions ?? [])].some(Boolean)
   const revealed = isRevealed(match, data.votes)
   const ratings = matchRatings(match, data.votes)
   const mvp = matchMvp(match, data.votes)
@@ -229,11 +230,21 @@ function LineupTab({ match }: { match: Match }) {
         players={players}
         editable={editable}
         onSlotClick={(side, index) => setPicker({ side, index })}
+        onMove={(side, index, pos) => store.setSlotPosition(match.id, side, index, pos)}
         ratings={revealed ? ratings : undefined}
         mvpId={revealed ? mvp?.playerId : null}
         goalsBy={goalsBy}
       />
-      {editable && <p className="text-center text-xs text-muted">Oyuncu eklemek ya da değiştirmek için sahadaki bir yere dokun.</p>}
+      {editable && (
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center text-xs text-muted">
+          <span>Dokun: oyuncu ekle / değiştir · Basılı tutup sürükle: yerini değiştir</span>
+          {hasCustom && (
+            <button className="font-semibold text-brand" onClick={() => store.resetPositions(match.id)}>
+              Dizilişe sıfırla
+            </button>
+          )}
+        </div>
+      )}
 
       {bench.length > 0 && (
         <div>

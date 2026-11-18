@@ -37,10 +37,11 @@ export default function PlayerPage() {
               <span className="text-[10px] font-semibold uppercase text-muted">Genel</span>
             </div>
           </div>
-          <div className="mt-4 grid grid-cols-4 gap-2 border-t border-line pt-4">
+          <div className="mt-4 grid grid-cols-5 gap-2 border-t border-line pt-4">
             <Stat label="Forma" value={player.number || '–'} />
             <Stat label="Ayak" value={player.foot} />
             <Stat label="Mevki" value={player.position} />
+            <Stat label="Beden" value={player.size ?? '–'} />
             <Stat label="Maç" value={s.matches} />
           </div>
         </div>

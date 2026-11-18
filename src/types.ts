@@ -1,5 +1,7 @@
 export type Position = 'KL' | 'DEF' | 'OS' | 'FV'
 export type Foot = 'Sağ' | 'Sol' | 'İki'
+export type ShirtSize = 'S' | 'M' | 'L' | 'XL' | 'XXL'
+export const SHIRT_SIZES: ShirtSize[] = ['S', 'M', 'L', 'XL', 'XXL']
 
 export const ATTR_KEYS = ['hucum', 'teknik', 'pas', 'savunma', 'fizik'] as const
 export type AttrKey = (typeof ATTR_KEYS)[number]
@@ -11,6 +13,8 @@ export interface Player {
   position: Position
   number: number
   foot: Foot
+  /** Forma bedeni */
+  size?: ShirtSize
   createdAt: string
 }
 
@@ -23,6 +27,16 @@ export interface Team {
   formation: number[]
   /** Dizilişe göre düzleştirilmiş slotlar. null = boş */
   slots: (string | null)[]
+  /**
+   * Elle sürüklenmiş konumlar (saha yüzdesi, 0-100). Slotla aynı sırada.
+   * null/undefined = dizilişteki varsayılan yer.
+   */
+  positions?: (PitchPos | null)[]
+}
+
+export interface PitchPos {
+  x: number
+  y: number
 }
 
 export interface Goal {
@@ -71,8 +85,14 @@ export interface Account {
   createdAt: string
 }
 
+/** Ekibin / kulübün kendisi */
+export interface Club {
+  name: string
+}
+
 export interface AppData {
-  version: 2
+  version: 3
+  club: Club
   accounts: Account[]
   players: Player[]
   matches: Match[]
