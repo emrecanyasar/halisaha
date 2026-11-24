@@ -106,9 +106,36 @@ export interface Group {
   createdAt: string
 }
 
+export type OpponentLevel = 'amator' | 'orta' | 'iyi'
+/** Saha ücreti nasıl ödenecek */
+export type FeeSplit = 'yari' | 'kaybeden' | 'biz'
+
+/** Rakip arayan takımın ilanı. İletişim site dışında (telefon / WhatsApp) kurulur. */
+export interface OpponentAd {
+  id: string
+  /** İlanı veren kullanıcı */
+  ownerId: string
+  /** İsteğe bağlı: ilanın ait olduğu grup */
+  groupId?: string
+  teamName: string
+  date: string // YYYY-MM-DD
+  time: string // HH:mm
+  venue: string
+  playersPerSide: number
+  level: OpponentLevel
+  feeSplit: FeeSplit
+  /** Sadece giriş yapanlara gösterilir */
+  phone: string
+  note?: string
+  /** Rakip bulununca ilan kapatılır */
+  status: 'open' | 'closed'
+  createdAt: string
+}
+
 export interface AppData {
-  version: 7
+  version: 8
   groups: Group[]
+  opponentAds: OpponentAd[]
   accounts: Account[]
   players: Player[]
   matches: Match[]

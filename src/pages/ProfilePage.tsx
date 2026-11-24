@@ -64,6 +64,9 @@ export default function ProfilePage() {
           <Link to={`/oyuncu/${me.id}/duzenle`} className="card flex items-center justify-between px-4 py-3 text-sm font-semibold hover:bg-surface-2">
             Mevki, forma no ve ayak bilgisi <span className="text-muted">→</span>
           </Link>
+          <Link to="/ayarlar" className="card flex items-center justify-between px-4 py-3 text-sm font-semibold hover:bg-surface-2">
+            Ayarlar ve veriler <span className="text-muted">→</span>
+          </Link>
           <button
             className="btn-danger w-full"
             onClick={() => {

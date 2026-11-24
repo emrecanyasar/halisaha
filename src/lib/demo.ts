@@ -1,4 +1,4 @@
-import type { AppData, Attendance, Goal, Group, Match, Player, Position } from '../types'
+import type { AppData, Attendance, FeeSplit, Goal, Group, Match, OpponentAd, OpponentLevel, Player, Position } from '../types'
 import { FORMATIONS } from './constants'
 import { parseDate, seededRandom, todayISO, toISODate } from './utils'
 
@@ -85,6 +85,7 @@ export const withDemoGroups = (d: AppData): AppData => {
     players: d.players.filter((p) => !p.id.startsWith(DEMO_PREFIX)),
     matches: d.matches.filter((m) => !isDemoGroup(m.groupId)),
     votes: d.votes.filter((v) => !v.matchId.startsWith(DEMO_PREFIX)),
+    opponentAds: (d.opponentAds ?? []).filter((a) => !a.id.startsWith(DEMO_PREFIX)),
   }
   const today = todayISO()
   const now = new Date().toISOString()
@@ -163,8 +164,33 @@ export const withDemoGroups = (d: AppData): AppData => {
     })
   })
 
+  // Örnek rakip ilanları (telefonlar örnek, aranamaz)
+  const ADS: [groupIndex: number, dayOffset: number, time: string, perSide: number, level: OpponentLevel, fee: FeeSplit, note: string][] = [
+    [0, 2, '22:00', 7, 'orta', 'yari', 'Saha ayarlı, sadece rakip eksik. Centilmen bir maç arıyoruz.'],
+    [1, 3, '20:00', 6, 'amator', 'kaybeden', 'Ofis takımıyız, keyif için oynuyoruz.'],
+    [3, 5, '23:00', 8, 'iyi', 'yari', 'Tempolu oynuyoruz, kaleciniz olsun lütfen.'],
+    [4, 6, '18:00', 6, 'amator', 'biz', 'Saha bizden, sadece gelin oynayalım.'],
+  ]
+  const ads: OpponentAd[] = ADS.map(([gi, offset, time, perSide, level, feeSplit, note], i) => ({
+    id: `${DEMO_PREFIX}ad${i}`,
+    ownerId: groups[gi]!.adminIds[0]!,
+    groupId: groups[gi]!.id,
+    teamName: groups[gi]!.name,
+    date: shiftDays(today, offset),
+    time,
+    venue: GROUPS[gi]!.venue,
+    playersPerSide: perSide,
+    level,
+    feeSplit,
+    phone: `0500 000 00 0${i + 1}`,
+    note,
+    status: 'open',
+    createdAt: now,
+  }))
+
   return {
     ...base,
+    opponentAds: [...base.opponentAds, ...ads],
     groups: [...base.groups, ...groups],
     players: [...base.players, ...players],
     matches: [...base.matches, ...matches],

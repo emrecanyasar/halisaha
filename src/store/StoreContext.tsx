@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import type { Account, AppData, Attendance, Attributes, Foot, Goal, Group, Match, PitchPos, Player, Position, TeamSide, Vote } from '../types'
+import type { Account, AppData, Attendance, Attributes, Foot, Goal, Group, Match, OpponentAd, PitchPos, Player, Position, TeamSide, Vote } from '../types'
 import { FORMATIONS } from '../lib/constants'
 import { CLUB_NAME, createSeedData, emptyData, withMainGroup, withPresetAccounts, withPresetMatch, withRoster, withoutSamples } from '../lib/seed'
 import { withDemoGroups } from '../lib/demo'
@@ -33,7 +33,8 @@ export const migrate = (raw: unknown): AppData | null => {
     const { club: _club, ...rest } = out
     out = withMainGroup({ ...rest, version: 7, groups: (rest.groups ?? []).filter((g) => !g.demo) } as unknown as AppData, name) as unknown as Loose
   }
-  return out.version === 7 ? (out as unknown as AppData) : null
+  if (out.version === 7) out = { ...out, version: 8, opponentAds: (out.opponentAds ?? []).filter((a) => !a.id.startsWith('demo-')) }
+  return out.version === 8 ? (out as unknown as AppData) : null
 }
 
 const load = (): AppData => {
@@ -364,6 +365,20 @@ const createActions = (set: (fn: (d: AppData) => AppData) => void, get: () => Ap
         return { ...m, attendance }
       }),
     })),
+
+  // ---- Rakip ilanları ----
+  createAd: (input: Omit<OpponentAd, 'id' | 'ownerId' | 'status' | 'createdAt'>): OpponentAd | null => {
+    const me = get().currentUserId
+    if (!me) return null
+    const ad: OpponentAd = { ...input, id: uid(), ownerId: me, status: 'open', createdAt: new Date().toISOString() }
+    set((d) => ({ ...d, opponentAds: [...d.opponentAds, ad] }))
+    return ad
+  },
+  /** Sadece ilan sahibi kapatabilir / açabilir */
+  setAdStatus: (id: string, status: OpponentAd['status']) =>
+    set((d) => ({ ...d, opponentAds: d.opponentAds.map((a) => (a.id === id && a.ownerId === d.currentUserId ? { ...a, status } : a)) })),
+  deleteAd: (id: string) =>
+    set((d) => ({ ...d, opponentAds: d.opponentAds.filter((a) => !(a.id === id && a.ownerId === d.currentUserId)) })),
 
   replaceAll: (data: AppData) => set(() => withDemoGroups(data)),
   loadSeed: () => set(() => createSeedData()),

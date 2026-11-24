@@ -9,8 +9,8 @@ import { adminGroups } from '../lib/groups'
 const NAV = [
   { to: '/', label: 'Maçlar', icon: 'ball', end: true, auth: false },
   { to: '/kadro', label: 'Kadro Kur', icon: 'lineup', end: false, auth: false },
+  { to: '/rakip', label: 'Rakip Bul', icon: 'megaphone', end: false, auth: false },
   { to: '/gruplarim', label: 'Gruplarım', icon: 'users', end: false, auth: true },
-  { to: '/ayarlar', label: 'Ayarlar', icon: 'settings', end: false, auth: true },
 ]
 
 function Logo({ club }: { club?: string }) {
