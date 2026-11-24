@@ -48,8 +48,12 @@ export interface Goal {
 
 export type MatchStatus = 'planned' | 'finished'
 
+export type Attendance = 'yes' | 'no'
+
 export interface Match {
   id: string
+  /** Maçın ait olduğu grup */
+  groupId: string
   date: string // YYYY-MM-DD
   time: string // HH:mm
   venue: string
@@ -60,6 +64,8 @@ export interface Match {
   goals: Goal[]
   /** Oylama elle kapatıldı mı? Kapandıysa ya da herkes oy verdiyse sonuçlar açılır. */
   votingClosed: boolean
+  /** Yaklaşan maça katılım: oyuncu kimliği → geliyorum / gelmiyorum */
+  attendance?: Record<string, Attendance>
   createdAt: string
 }
 
@@ -85,14 +91,24 @@ export interface Account {
   createdAt: string
 }
 
-/** Ekibin / kulübün kendisi */
-export interface Club {
+/** Halı saha maç grubu. Bir oyuncu birden çok grupta olabilir. */
+export interface Group {
+  id: string
   name: string
+  /** Davet kodu: bu kodla (ya da /katil/<kod> linkiyle) gruba katılınır */
+  inviteCode: string
+  adminIds: string[]
+  memberIds: string[]
+  /** Açık grupların maçları ana sayfada herkese görünür */
+  isPublic: boolean
+  /** Örnek (demo) grup: her açılışta yeniden üretilir, katılınamaz */
+  demo?: boolean
+  createdAt: string
 }
 
 export interface AppData {
-  version: 6
-  club: Club
+  version: 7
+  groups: Group[]
   accounts: Account[]
   players: Player[]
   matches: Match[]

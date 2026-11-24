@@ -1,18 +1,24 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useStore } from '../store/StoreContext'
-import { PageHeader } from '../components/ui'
+import { EmptyState, PageHeader } from '../components/ui'
+import { adminGroups } from '../lib/groups'
 import { PLAYERS_PER_SIDE_OPTIONS, TEAM_COLORS } from '../lib/constants'
 import { todayISO } from '../lib/utils'
 
 export default function NewMatchPage() {
   const { data, createMatch } = useStore()
   const nav = useNavigate()
-  const lastVenue = [...data.matches].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))[0]?.venue ?? ''
+  const [params] = useSearchParams()
+  const groups = adminGroups(data)
+  const initialGroup = groups.find((g) => g.id === params.get('grup'))?.id ?? groups[0]?.id ?? ''
+  const lastVenue = (gid: string) =>
+    [...data.matches].filter((m) => m.groupId === gid).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))[0]?.venue ?? ''
   const [form, setForm] = useState({
+    groupId: initialGroup,
     date: todayISO(),
     time: '21:00',
-    venue: lastVenue,
+    venue: lastVenue(initialGroup),
     playersPerSide: 7,
     teamAName: 'Kırmızılar',
     teamAColor: TEAM_COLORS[0]!,
@@ -27,10 +33,38 @@ export default function NewMatchPage() {
     nav(`/mac/${m.id}`, { replace: true })
   }
 
+  if (!groups.length)
+    return (
+      <div className="p-4">
+        <PageHeader title="Yeni maç" />
+        <EmptyState
+          title="Önce bir grup gerekiyor"
+          text="Maçlar bir gruba ait olur. Kendi grubunu kur ya da yöneticisi olduğun bir gruptan maç oluştur."
+          action={<Link to="/gruplarim" className="btn-primary">Gruplarım</Link>}
+        />
+      </div>
+    )
+
   return (
     <form onSubmit={submit}>
       <PageHeader title="Yeni maç" />
       <div className="space-y-4 px-4">
+        {groups.length > 1 && (
+          <div className="card p-4">
+            <label className="label" htmlFor="grp">Grup</label>
+            <select
+              id="grp"
+              className="input"
+              value={form.groupId}
+              onChange={(e) => setForm((f) => ({ ...f, groupId: e.target.value, venue: f.venue || lastVenue(e.target.value) }))}
+            >
+              {groups.map((g) => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+        {groups.length === 1 && <p className="px-1 text-sm text-muted">Grup: <b className="text-ink">{groups[0]!.name}</b></p>}
         <div className="card space-y-4 p-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -56,7 +90,7 @@ export default function NewMatchPage() {
                 type="button"
                 key={n}
                 onClick={() => set('playersPerSide', n)}
-                className={`rounded-xl py-2.5 text-sm font-bold transition ${form.playersPerSide === n ? 'bg-brand text-white' : 'bg-surface-2 text-white hover:bg-line'}`}
+                className={`rounded-xl py-2.5 text-sm font-bold transition ${form.playersPerSide === n ? 'bg-brand text-white' : 'bg-surface-2 text-ink hover:bg-line'}`}
               >
                 {n}
               </button>

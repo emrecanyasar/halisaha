@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { usePlayerMap, useStore } from '../store/StoreContext'
+import { useGroupAccess, usePlayerMap, useStore } from '../store/StoreContext'
 import { EmptyState, Icon, PageHeader } from '../components/ui'
 import { teamPlayers } from '../lib/stats'
 import { uid } from '../lib/utils'
@@ -13,8 +13,16 @@ export default function ResultPage() {
   const nav = useNavigate()
   const match = store.data.matches.find((m) => m.id === id)
   const [goals, setGoals] = useState<Goal[]>(match?.goals ?? [])
+  const { canEdit } = useGroupAccess(match?.groupId)
 
   if (!match) return <EmptyState title="Maç bulunamadı" />
+  if (!canEdit)
+    return (
+      <div className="p-4">
+        <PageHeader title="Skor" />
+        <EmptyState title="Bu maçı sadece grup yöneticileri düzenleyebilir" />
+      </div>
+    )
   const finished = match.status === 'finished'
   const count = (side: TeamSide) => goals.filter((g) => g.team === side).length
   const addGoal = (side: TeamSide) => setGoals((g) => [...g, { id: uid(), team: side, scorerId: null, assistId: null }])

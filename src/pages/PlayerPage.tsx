@@ -1,10 +1,12 @@
 import { Link, useParams } from 'react-router-dom'
+import { canEditPlayer, isMember } from '../lib/groups'
+import type { AppData } from '../types'
 import { useStore } from '../store/StoreContext'
 import { AttrBars, FormChart, RadarChart } from '../components/Charts'
 import { Avatar, EmptyState, Icon, PageHeader, RatingBadge, Stat } from '../components/ui'
 import PlayerCard from '../components/PlayerCard'
 import { POSITION_LABELS } from '../lib/constants'
-import { playerSummary, score, sideOf } from '../lib/stats'
+import { participants, playerSummary, score, sideOf } from '../lib/stats'
 import { formatShortDate } from '../lib/utils'
 import { useIsDesktop } from '../lib/hooks'
 
@@ -22,11 +24,97 @@ export default function PlayerPage() {
     )
   const s = playerSummary(data, player)
 
+  // Kart kimliktir: tüm gruplardaki oylardan oluşur. Gruplar ayrıca kendi istatistikleriyle listelenir.
+  const groupsOf = data.groups.filter((g) => g.memberIds.includes(player.id))
+  const visibleGroupsOf = groupsOf.filter((g) => g.isPublic || isMember(g, data.currentUserId))
+  const groupStats = visibleGroupsOf
+    .map((g) => {
+      const ids = new Set(data.matches.filter((m) => m.groupId === g.id).map((m) => m.id))
+      const scoped: AppData = { ...data, matches: data.matches.filter((m) => ids.has(m.id)), votes: data.votes.filter((v) => ids.has(v.matchId)) }
+      return { group: g, s: playerSummary(scoped, player), admin: g.adminIds.includes(player.id) }
+    })
+    .sort((a, b) => b.s.matches - a.s.matches || a.group.name.localeCompare(b.group.name, 'tr'))
+  // Kartta görünen kısaltma: en çok maç yaptığı grup
+  const primaryGroup = groupStats[0]?.group ?? groupsOf[0]
+  const groupName = (gid: string) => data.groups.find((g) => g.id === gid)?.name
+  const upcoming = data.matches
+    .filter((m) => m.status === 'planned' && (participants(m).includes(player.id) || m.attendance?.[player.id] === 'yes'))
+    .filter((m) => visibleGroupsOf.some((g) => g.id === m.groupId))
+    .sort((a, b) => (a.date + a.time < b.date + b.time ? -1 : 1))
+
+  const groupsCard = groupStats.length > 0 && (
+    <div>
+      <div className="section-title">Grupları</div>
+      <div className="card divide-y divide-line overflow-hidden">
+        {groupStats.map(({ group, s: gs, admin }) => {
+          const canOpen = group.isPublic || isMember(group, data.currentUserId)
+          const body = (
+            <>
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand/10 text-sm font-extrabold text-brand">
+                {group.name[0]?.toLocaleUpperCase('tr')}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 truncate text-sm font-semibold">
+                  {group.name}
+                  {admin && <span className="rounded bg-amber-100 px-1 text-[10px] font-bold text-amber-800">Yönetici</span>}
+                </div>
+                <div className="text-xs text-muted">
+                  {gs.matches} maç · {gs.goals} gol · {gs.assists} asist{gs.mvps > 0 && ` · ⭐${gs.mvps}`}
+                </div>
+              </div>
+              <RatingBadge value={gs.avgRating} size="sm" />
+            </>
+          )
+          return canOpen ? (
+            <Link key={group.id} to={`/grup/${group.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-surface-2">{body}</Link>
+          ) : (
+            <div key={group.id} className="flex items-center gap-3 px-4 py-3">{body}</div>
+          )
+        })}
+      </div>
+    </div>
+  )
+
+  const upcomingCard = upcoming.length > 0 && (
+    <div>
+      <div className="section-title">Yaklaşan maçları</div>
+      <div className="card divide-y divide-line overflow-hidden">
+        {upcoming.map((m) => {
+          const side = sideOf(m, player.id)
+          const team = side === 'A' ? m.teamA : side === 'B' ? m.teamB : null
+          return (
+            <Link key={m.id} to={`/mac/${m.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-surface-2">
+              <div className="w-14 shrink-0 text-xs">
+                <div className="font-semibold">{formatShortDate(m.date)}</div>
+                <div className="text-muted">{m.time}</div>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-semibold">{m.teamA.name} – {m.teamB.name}</div>
+                <div className="truncate text-xs text-muted">{groupName(m.groupId)}{m.venue && ` · ${m.venue}`}</div>
+              </div>
+              {team ? (
+                <span className="flex shrink-0 items-center gap-1 text-[11px] font-semibold">
+                  <span className="h-2.5 w-2.5 rounded-full ring-1 ring-black/10" style={{ background: team.color }} />
+                  {team.name}
+                </span>
+              ) : (
+                <span className="shrink-0 rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-semibold text-green-700">Geliyor</span>
+              )}
+            </Link>
+          )
+        })}
+      </div>
+    </div>
+  )
+
   const profile = (
     <>
         {/* FIFA tarzı kart */}
         <div className="card overflow-hidden py-6" style={{ background: 'radial-gradient(120% 80% at 50% 0%, #e8f7ee 0%, #ffffff 60%)' }}>
-          <PlayerCard player={player} attrs={s.attrs} ovr={s.ovr} club={data.club.name} votes={s.attrVotes} />
+          <PlayerCard player={player} attrs={s.attrs} ovr={s.ovr} club={primaryGroup?.name ?? 'Halısaha'} votes={s.attrVotes} />
+          <p className="mx-auto mt-4 max-w-xs px-4 text-center text-[11px] text-muted">
+            Kart, oyuncunun {groupsOf.length > 1 ? `${groupsOf.length} gruptaki ` : ''}tüm maçlarında aldığı kapalı oylardan oluşur.
+          </p>
         </div>
         {/* Profil kartı */}
         <div className="card p-4">
@@ -116,8 +204,11 @@ export default function PlayerPage() {
                     <span className={`grid h-5 w-5 place-items-center rounded text-[10px] font-bold text-white ${result === 'G' ? 'bg-green-600' : result === 'B' ? 'bg-slate-500' : 'bg-red-600'}`}>
                       {result}
                     </span>
-                    <span className="flex-1 truncate text-sm">
-                      {my.name} <span className="font-bold tabular-nums">{side === 'A' ? `${sc.a}-${sc.b}` : `${sc.b}-${sc.a}`}</span> {opp.name}
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm">
+                        {my.name} <span className="font-bold tabular-nums">{side === 'A' ? `${sc.a}-${sc.b}` : `${sc.b}-${sc.a}`}</span> {opp.name}
+                      </span>
+                      {groupsOf.length > 1 && <span className="block truncate text-[11px] text-muted">{groupName(match.groupId)}</span>}
                     </span>
                     <RatingBadge value={rating} size="sm" />
                   </Link>
@@ -134,9 +225,11 @@ export default function PlayerPage() {
       <PageHeader
         title={player.name}
         right={
-          <Link to={`/oyuncu/${player.id}/duzenle`} className="rounded-full p-2 hover:bg-surface-2" aria-label="Düzenle">
-            <Icon name="edit" />
-          </Link>
+          canEditPlayer(data, player.id) ? (
+            <Link to={`/oyuncu/${player.id}/duzenle`} className="rounded-full p-2 hover:bg-surface-2" aria-label="Düzenle">
+              <Icon name="edit" />
+            </Link>
+          ) : undefined
         }
       />
       {isDesktop ? (
@@ -144,19 +237,23 @@ export default function PlayerPage() {
           <div className="space-y-4">
             {profile}
             {stats}
+            {groupsCard}
             {history}
           </div>
           <div className="space-y-4">
             {radar}
             {formCard}
+            {upcomingCard}
           </div>
         </div>
       ) : (
         <div className="space-y-4 px-4">
           {profile}
+          {upcomingCard}
           {radar}
           {formCard}
           {stats}
+          {groupsCard}
           {history}
         </div>
       )}

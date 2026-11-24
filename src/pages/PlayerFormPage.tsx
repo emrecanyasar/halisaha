@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useStore } from '../store/StoreContext'
-import { ConfirmButton, Icon, PageHeader } from '../components/ui'
+import { ConfirmButton, EmptyState, Icon, PageHeader } from '../components/ui'
+import { canEditPlayer, isAdmin } from '../lib/groups'
 import { POSITION_LABELS } from '../lib/constants'
 import { SHIRT_SIZES, type Foot, type Position, type ShirtSize } from '../types'
 
@@ -10,6 +11,11 @@ export default function PlayerFormPage() {
   const store = useStore()
   const nav = useNavigate()
   const existing = store.data.players.find((p) => p.id === id)
+  const [params] = useSearchParams()
+  // Yeni oyuncu bir gruba eklenir (?grup=<id>); sadece o grubun yöneticisi ekleyebilir
+  const group = store.data.groups.find((g) => g.id === params.get('grup'))
+  const allowed = existing ? canEditPlayer(store.data, existing.id) : isAdmin(group, store.data.currentUserId) && !group?.demo
+  const hasAccount = !!existing && store.data.accounts.some((a) => a.playerId === existing.id)
   const [f, setF] = useState({
     name: existing?.name ?? '',
     position: existing?.position ?? ('OS' as Position),
@@ -26,14 +32,26 @@ export default function PlayerFormPage() {
       store.updatePlayer(existing.id, payload)
       nav(-1)
     } else {
-      const p = store.addPlayer(payload)
-      nav(`/oyuncu/${p.id}`, { replace: true })
+      store.addPlayer(payload, group!.id)
+      nav(`/grup/${group!.id}?sekme=uyeler`, { replace: true })
     }
   }
 
+  if (!allowed)
+    return (
+      <div className="p-4">
+        <PageHeader title="Oyuncu" />
+        <EmptyState
+          title="Bu işlem için yetkin yok"
+          text={existing ? 'Hesabı olan oyuncunun profilini sadece kendisi düzenleyebilir.' : 'Oyuncuyu bir grubun yöneticisi ekleyebilir.'}
+          action={<Link to="/gruplarim" className="btn-ghost">Gruplarım</Link>}
+        />
+      </div>
+    )
+
   return (
     <form onSubmit={submit}>
-      <PageHeader title={existing ? 'Oyuncuyu düzenle' : 'Yeni oyuncu'} />
+      <PageHeader title={existing ? 'Oyuncuyu düzenle' : `${group?.name ?? ''} · yeni oyuncu`} />
       <div className="space-y-4 px-4">
         <div className="card space-y-4 p-4">
           <div>
@@ -76,14 +94,14 @@ export default function PlayerFormPage() {
         </div>
         <p className="px-1 text-xs text-muted">Özellik puanları elle girilmez; maç sonrası oylamalardan otomatik hesaplanır.</p>
         <button type="submit" className="btn-primary w-full py-3">{existing ? 'Kaydet' : 'Oyuncuyu ekle'}</button>
-        {existing && (
+        {existing && !hasAccount && (
           <ConfirmButton
             danger
             className="btn-danger w-full"
             question={`${existing.name} silinecek. Verdiği ve aldığı oylar da silinir. Emin misin?`}
             onConfirm={() => {
               store.deletePlayer(existing.id)
-              nav('/oyuncular', { replace: true })
+              nav('/gruplarim', { replace: true })
             }}
           >
             <Icon name="trash" size={16} /> Oyuncuyu sil

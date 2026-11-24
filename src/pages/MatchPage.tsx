@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { usePlayerMap, useStore } from '../store/StoreContext'
+import { useGroupAccess, usePlayerMap, useStore } from '../store/StoreContext'
 import Pitch, { toPitchPercent } from '../components/Pitch'
 import { Avatar, ConfirmButton, EmptyState, Icon, PageHeader, RatingBadge, Sheet, Tabs } from '../components/ui'
 import { FORMATIONS, POSITION_LABELS, formationLabel } from '../lib/constants'
@@ -84,11 +84,21 @@ export default function MatchPage() {
 
 function MatchHeader({ match, flush = false }: { match: Match; flush?: boolean }) {
   const players = usePlayerMap()
+  const { group, canEdit, isMember } = useGroupAccess(match.groupId)
   const s = score(match)
   const finished = match.status === 'finished'
   const goalsFor = (side: TeamSide) => match.goals.filter((g) => g.team === side)
   return (
     <div className={`card p-4 ${flush ? '' : 'mx-4'}`}>
+      {group && (
+        <div className="mb-2 text-center">
+          {isMember ? (
+            <Link to={`/grup/${group.id}`} className="rounded-full bg-brand/10 px-2.5 py-1 text-[11px] font-bold text-brand">{group.name}</Link>
+          ) : (
+            <span className="rounded-full bg-surface-2 px-2.5 py-1 text-[11px] font-bold text-muted">{group.name}</span>
+          )}
+        </div>
+      )}
       <div className="text-center text-xs capitalize text-muted">
         {formatDayHeader(match.date)} · {match.time}
         {match.venue && <div className="mt-0.5 normal-case">{match.venue}</div>}
@@ -123,6 +133,8 @@ function MatchHeader({ match, flush = false }: { match: Match; flush?: boolean }
           ))}
         </div>
       )}
+      {!finished && <Attendance match={match} />}
+      {canEdit && (
       <div className="mt-4 flex gap-2">
         {finished ? (
           <Link to={`/mac/${match.id}/sonuc`} className="btn-ghost flex-1">
@@ -134,6 +146,52 @@ function MatchHeader({ match, flush = false }: { match: Match; flush?: boolean }
           </Link>
         )}
       </div>
+      )}
+    </div>
+  )
+}
+
+/** Yaklaşan maça katılım: üyeler geliyorum / gelmiyorum der, herkes sayıları görür */
+function Attendance({ match }: { match: Match }) {
+  const store = useStore()
+  const players = usePlayerMap()
+  const { isMember, me } = useGroupAccess(match.groupId)
+  const att = match.attendance ?? {}
+  const yes = Object.keys(att).filter((id) => att[id] === 'yes')
+  const no = Object.keys(att).filter((id) => att[id] === 'no')
+  const mine = me ? att[me] : undefined
+  const need = match.playersPerSide * 2
+  return (
+    <div className="mt-4 border-t border-line pt-3">
+      <div className="flex items-center justify-between text-xs">
+        <span className="font-semibold">Katılım</span>
+        <span className={yes.length >= need ? 'font-bold text-brand' : 'text-muted'}>
+          {yes.length}/{need} geliyor{no.length > 0 && ` · ${no.length} gelmiyor`}
+        </span>
+      </div>
+      {yes.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1">
+          {yes.map((id) => (
+            <span key={id} className="rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-800">{players.get(id)?.name ?? '?'}</span>
+          ))}
+        </div>
+      )}
+      {isMember && me && (
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button
+            onClick={() => store.setAttendance(match.id, me, mine === 'yes' ? null : 'yes')}
+            className={`rounded-xl py-2.5 text-sm font-bold ${mine === 'yes' ? 'bg-brand text-white' : 'bg-surface-2 hover:bg-line'}`}
+          >
+            {mine === 'yes' ? '✓ Geliyorum' : 'Geliyorum'}
+          </button>
+          <button
+            onClick={() => store.setAttendance(match.id, me, mine === 'no' ? null : 'no')}
+            className={`rounded-xl py-2.5 text-sm font-bold ${mine === 'no' ? 'bg-red-600 text-white' : 'bg-surface-2 hover:bg-line'}`}
+          >
+            {mine === 'no' ? '✕ Gelmiyorum' : 'Gelmiyorum'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -162,7 +220,9 @@ function LineupTab({ match, asideTop, asideBottom }: { match: Match; asideTop?: 
   const pitchRef = useRef<HTMLDivElement>(null)
   const [benchDrag, setBenchDrag] = useState<{ playerId: string; x: number; y: number; over: boolean } | null>(null)
   const split = asideTop !== undefined
-  const editable = match.status === 'planned'
+  const { group, canEdit } = useGroupAccess(match.groupId)
+  const editable = match.status === 'planned' && canEdit
+  const members = data.players.filter((p) => group?.memberIds.includes(p.id))
   const hasCustom = [...(match.teamA.positions ?? []), ...(match.teamB.positions ?? [])].some(Boolean)
   const revealed = isRevealed(match, data.votes)
   const ratings = matchRatings(match, data.votes)
@@ -173,7 +233,7 @@ function LineupTab({ match, asideTop, asideBottom }: { match: Match; asideTop?: 
     return m
   }, [match.goals])
   const inMatch = new Set(participants(match))
-  const bench = data.players.filter((p) => !inMatch.has(p.id)).sort((a, b) => a.name.localeCompare(b.name, 'tr'))
+  const bench = members.filter((p) => !inMatch.has(p.id)).sort((a, b) => a.name.localeCompare(b.name, 'tr'))
   const current = picker ? (picker.side === 'A' ? match.teamA : match.teamB).slots[picker.index] : null
 
   // --- Kadro listesinden sahaya sürükle-bırak ---
@@ -268,7 +328,7 @@ function LineupTab({ match, asideTop, asideBottom }: { match: Match; asideTop?: 
     </div>
   )
 
-  const benchList = bench.length > 0 && (
+  const benchList = editable && bench.length > 0 && (
     <div>
       <div className="section-title flex items-center justify-between">
         <span>Kadroda olmayanlar ({bench.length})</span>
@@ -371,10 +431,10 @@ function LineupTab({ match, asideTop, asideBottom }: { match: Match; asideTop?: 
                 <Icon name="close" /> Bu yeri boşalt ({players.get(current)?.name})
               </button>
             )}
-            {data.players.length === 0 && (
-              <EmptyState title="Henüz oyuncu yok" action={<Link to="/oyuncu/yeni" className="btn-primary">Oyuncu ekle</Link>} />
+            {members.length === 0 && (
+              <EmptyState title="Grupta oyuncu yok" action={<Link to={`/oyuncu/yeni?grup=${match.groupId}`} className="btn-primary">Oyuncu ekle</Link>} />
             )}
-            {[...data.players]
+            {[...members]
               .sort((a, b) => Number(inMatch.has(a.id)) - Number(inMatch.has(b.id)) || a.name.localeCompare(b.name, 'tr'))
               .map((p) => {
                 const where = match.teamA.slots.includes(p.id) ? match.teamA.name : match.teamB.slots.includes(p.id) ? match.teamB.name : null
@@ -414,7 +474,10 @@ function BalanceSheet({ match, open, onClose }: { match: Match; open: boolean; o
   const store = useStore()
   const { data } = store
   const need = match.playersPerSide * 2
-  const [selected, setSelected] = useState<Set<string>>(() => new Set(participants(match)))
+  const { group } = useGroupAccess(match.groupId)
+  const members = data.players.filter((p) => group?.memberIds.includes(p.id))
+  const coming = Object.keys(match.attendance ?? {}).filter((id) => match.attendance![id] === 'yes')
+  const [selected, setSelected] = useState<Set<string>>(() => new Set(participants(match).length ? participants(match) : coming.slice(0, need)))
   const toggle = (id: string) =>
     setSelected((s) => {
       const n = new Set(s)
@@ -428,7 +491,7 @@ function BalanceSheet({ match, open, onClose }: { match: Match; open: boolean; o
         Seçilen oyuncular özellik puanlarına göre iki takıma dengeli dağıtılır. Kaleciler ilk sıraya yerleşir.
       </p>
       <div className="space-y-1">
-        {data.players.map((p) => {
+        {members.map((p) => {
           const s = playerSummary(data, p)
           const on = selected.has(p.id)
           return (
@@ -436,7 +499,10 @@ function BalanceSheet({ match, open, onClose }: { match: Match; open: boolean; o
               <span className={`grid h-5 w-5 place-items-center rounded-md border ${on ? 'border-brand bg-brand text-white' : 'border-line'}`}>
                 {on && <Icon name="check" size={14} />}
               </span>
-              <span className="flex-1 text-sm">{p.name}</span>
+              <span className="flex-1 text-sm">
+                {p.name}
+                {coming.includes(p.id) && <span className="ml-1.5 text-[11px] font-semibold text-brand">geliyor</span>}
+              </span>
               <span className="text-xs text-muted">{p.position}</span>
               <span className="w-6 text-right text-xs font-bold">{s.ovr ?? '–'}</span>
             </button>
@@ -467,6 +533,7 @@ function RatingsTab({ match }: { match: Match }) {
   const ratings = matchRatings(match, data.votes)
   const mvp = matchMvp(match, data.votes)
   const me = data.currentUserId
+  const { canEdit } = useGroupAccess(match.groupId)
   const iPlayed = !!me && participants(match).includes(me)
   const iVoted = !!me && prog.done.includes(me)
 
@@ -497,7 +564,7 @@ function RatingsTab({ match }: { match: Match }) {
               {iVoted ? 'Oylarımı düzenle' : 'Oy ver'}
             </Link>
           ) : (
-            <p className="text-xs text-muted">{me ? 'Bu maçta oynamadığın için oy veremezsin.' : 'Oy vermek için Ayarlar’dan kim olduğunu seç.'}</p>
+            <p className="text-xs text-muted">{me ? 'Bu maçta oynamadığın için oy veremezsin.' : 'Oy vermek için giriş yap.'}</p>
           )}
         </div>
         <div>
@@ -516,9 +583,11 @@ function RatingsTab({ match }: { match: Match }) {
             ))}
           </div>
         </div>
-        <button className="btn-ghost w-full" onClick={() => store.setVotingClosed(match.id, true)}>
-          Oylamayı kapat ve ratingleri aç
-        </button>
+        {canEdit && (
+          <button className="btn-ghost w-full" onClick={() => store.setVotingClosed(match.id, true)}>
+            Oylamayı kapat ve ratingleri aç
+          </button>
+        )}
       </div>
     )
   }
@@ -578,7 +647,7 @@ function RatingsTab({ match }: { match: Match }) {
       <p className="text-center text-xs text-muted">
         Rating = maçta oynayan diğer oyuncuların verdiği kapalı oyların ortalaması. {prog.done.length}/{prog.total} kişi oy verdi.
       </p>
-      {match.votingClosed && !prog.complete && (
+      {canEdit && match.votingClosed && !prog.complete && (
         <button className="btn-ghost w-full" onClick={() => store.setVotingClosed(match.id, false)}>
           Oylamayı tekrar aç
         </button>
@@ -588,6 +657,30 @@ function RatingsTab({ match }: { match: Match }) {
 }
 
 function InfoTab({ match }: { match: Match }) {
+  const { canEdit, group } = useGroupAccess(match.groupId)
+  if (!canEdit)
+    return (
+      <div className="card divide-y divide-line text-sm">
+        <InfoRow label="Grup" value={group?.name ?? '–'} />
+        <InfoRow label="Gün" value={formatDayHeader(match.date)} />
+        <InfoRow label="Saat" value={match.time} />
+        <InfoRow label="Saha" value={match.venue || '–'} />
+        <InfoRow label="Kişi sayısı" value={`${match.playersPerSide}v${match.playersPerSide}`} />
+      </div>
+    )
+  return <InfoEdit match={match} />
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between gap-4 px-4 py-3">
+      <span className="text-muted">{label}</span>
+      <span className="text-right font-medium">{value}</span>
+    </div>
+  )
+}
+
+function InfoEdit({ match }: { match: Match }) {
   const store = useStore()
   const nav = useNavigate()
   const [f, setF] = useState({ date: match.date, time: match.time, venue: match.venue, a: match.teamA.name, b: match.teamB.name })
@@ -646,7 +739,7 @@ function InfoTab({ match }: { match: Match }) {
         question="Bu maç ve tüm oyları silinecek. Emin misin?"
         onConfirm={() => {
           store.deleteMatch(match.id)
-          nav('/', { replace: true })
+          nav(`/grup/${match.groupId}`, { replace: true })
         }}
       >
         <Icon name="trash" size={16} /> Maçı sil

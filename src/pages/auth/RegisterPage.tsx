@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useStore } from '../../store/StoreContext'
 import { isValidEmail } from '../../lib/auth'
+import { isDemoPlayer } from '../../lib/groups'
 import { POSITION_LABELS } from '../../lib/constants'
 import type { Foot, Position } from '../../types'
 import { AuthTitle, FormError, PasswordInput, StrengthMeter } from './common'
@@ -11,7 +12,10 @@ export default function RegisterPage() {
   const nav = useNavigate()
   const loc = useLocation()
   const unclaimed = useMemo(
-    () => data.players.filter((p) => !data.accounts.some((a) => a.playerId === p.id)).sort((a, b) => a.name.localeCompare(b.name, 'tr')),
+    () =>
+      data.players
+        .filter((p) => !isDemoPlayer(p.id) && !data.accounts.some((a) => a.playerId === p.id))
+        .sort((a, b) => a.name.localeCompare(b.name, 'tr')),
     [data.players, data.accounts],
   )
   const [f, setF] = useState({
@@ -49,7 +53,8 @@ export default function RegisterPage() {
     })
     setBusy(false)
     if (!r.ok) return setError(r.error)
-    nav((loc.state as { from?: string } | null)?.from ?? '/', { replace: true })
+    // Yeni kullanıcı (davet linkiyle gelmediyse) grup kurmak / katılmak için Gruplarım'a gider
+    nav((loc.state as { from?: string } | null)?.from ?? '/gruplarim', { replace: true })
   }
 
   return (

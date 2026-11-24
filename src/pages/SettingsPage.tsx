@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { migrate, useStore } from '../store/StoreContext'
-import { ROSTER, withRoster } from '../lib/seed'
 import { Avatar, ConfirmButton, Icon } from '../components/ui'
+import { isDemoPlayer } from '../lib/groups'
 
 export default function SettingsPage() {
   const store = useStore()
@@ -43,32 +43,13 @@ export default function SettingsPage() {
       <h1 className="text-2xl font-extrabold">Ayarlar</h1>
 
       <section>
-        <div className="section-title">Takım</div>
-        <div className="card space-y-3 p-4">
-          <div>
-            <label className="label" htmlFor="club">Takım adı</label>
-            <input id="club" className="input" value={data.club.name} onChange={(e) => store.setClubName(e.target.value)} />
-          </div>
-          <button className="btn-ghost w-full" onClick={() => {
-            const before = data.players.length
-            store.replaceAll(withRoster(data))
-            const added = withRoster(data).players.length - before
-            setMsg(added ? `${added} oyuncu kadroya eklendi.` : 'Kadrodaki herkes zaten ekli.')
-          }}>
-            {ROSTER.length} kişilik takım kadrosundan eksikleri ekle
-          </button>
-          {msg && <p className="text-xs text-brand">{msg}</p>}
-        </div>
-      </section>
-
-      <section>
         <div className="section-title">Test: başka oyuncu olarak geç</div>
         <p className="mb-2 px-1 text-xs text-muted">
           Veriler şimdilik sadece bu cihazda olduğu için, oylamayı denemek için şifresiz olarak başka bir oyuncunun yerine geçebilirsin.
           Ortak sunucuya geçince bu bölüm kalkacak.
         </p>
         <div className="card max-h-80 divide-y lg:max-h-[28rem] divide-line overflow-y-auto">
-          {data.players.map((p) => (
+          {data.players.filter((p) => !isDemoPlayer(p.id)).map((p) => (
             <button key={p.id} onClick={() => store.setCurrentUser(p.id)} className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-surface-2">
               <Avatar player={p} size={32} />
               <span className="flex-1 text-sm">{p.name}</span>
@@ -91,7 +72,7 @@ export default function SettingsPage() {
           <button onClick={() => fileRef.current?.click()} className="w-full px-4 py-3 text-left text-sm hover:bg-surface-2">Yedeği içe aktar</button>
           <button onClick={copyData} className="w-full px-4 py-3 text-left text-sm hover:bg-surface-2">Yedeği panoya kopyala</button>
           <div className="p-2">
-            <ConfirmButton className="w-full rounded-lg px-2 py-1 text-left text-sm hover:bg-surface-2" question="Tüm maçlar, oylar ve hesaplar silinip sadece takım kadrosu yüklenecek. Emin misin?" onConfirm={store.loadSeed}>
+            <ConfirmButton className="w-full rounded-lg px-2 py-1 text-left text-sm hover:bg-surface-2" question="Tüm gruplar, maçlar, oylar ve hesaplar silinip başlangıç verisi (takım kadrosu ve ilk grup) yüklenecek. Emin misin?" onConfirm={store.loadSeed}>
               Sıfırla: sadece takım kadrosuyla başla
             </ConfirmButton>
           </div>
@@ -107,7 +88,7 @@ export default function SettingsPage() {
 
       <section className="px-1 text-xs text-muted">
         <div>Halısaha v0.2 · deneme sürümü</div>
-        <div>{data.accounts.length} hesap · {data.players.length} oyuncu · {data.matches.length} maç · {data.votes.length} oy</div>
+        <div>{data.accounts.length} hesap · {data.groups.filter((g) => !g.demo).length} grup · {data.players.filter((p) => !isDemoPlayer(p.id)).length} oyuncu · {data.matches.filter((m) => !m.id.startsWith('demo-')).length} maç · {data.votes.length} oy</div>
       </section>
     </div>
   )

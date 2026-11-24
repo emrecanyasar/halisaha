@@ -58,6 +58,9 @@ export default function ProfilePage() {
           <Link to={`/oyuncu/${me.id}`} className="card flex items-center justify-between px-4 py-3 text-sm font-semibold hover:bg-surface-2">
             Oyuncu kartımı gör <span className="text-muted">→</span>
           </Link>
+          <Link to="/gruplarim" className="card flex items-center justify-between px-4 py-3 text-sm font-semibold hover:bg-surface-2">
+            Gruplarım ({store.data.groups.filter((g) => g.memberIds.includes(me.id)).length}) <span className="text-muted">→</span>
+          </Link>
           <Link to={`/oyuncu/${me.id}/duzenle`} className="card flex items-center justify-between px-4 py-3 text-sm font-semibold hover:bg-surface-2">
             Mevki, forma no ve ayak bilgisi <span className="text-muted">→</span>
           </Link>
@@ -65,7 +68,7 @@ export default function ProfilePage() {
             className="btn-danger w-full"
             onClick={() => {
               store.logout()
-              nav('/giris', { replace: true })
+              nav('/', { replace: true })
             }}
           >
             Çıkış yap

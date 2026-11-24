@@ -31,11 +31,11 @@ const cloneTeam = (t: Team): Team => {
 }
 
 /** Bir yarıdaki en yakın slot (dolu ya da boş) */
-const nearestSlot = (team: Team, side: TeamSide, pos: PitchPos, filter: (pid: string | null) => boolean) => {
+const nearestSlot = (team: Team, side: TeamSide, pos: PitchPos, filter: (pid: string | null, i: number) => boolean) => {
   let best = -1
   let bestD = Infinity
   team.slots.forEach((pid, i) => {
-    if (!filter(pid)) return
+    if (!filter(pid, i)) return
     const d = dist(slotPos(team, side, i), pos)
     if (d < bestD) {
       bestD = d
@@ -45,34 +45,60 @@ const nearestSlot = (team: Team, side: TeamSide, pos: PitchPos, filter: (pid: st
   return { index: best, d: bestD }
 }
 
+/** Bir oyuncunun "üstüne" bırakılmış sayılma mesafesi (saha yüzdesi, y ölçekli) */
+const HIT = 9
+
 /**
- * Sahadaki bir oyuncuyu sürükleyip bırakınca:
- * - Kendi yarısında kalırsa sadece konumu değişir.
- * - Orta sahayı geçerse diğer takıma geçer: karşı takımda boş yer varsa oraya,
- *   yoksa bırakıldığı yere en yakın rakip oyuncuyla yer değiştirir.
+ * Sürüklenen oyuncu bu konuma bırakılırsa ne olur?
+ * - `swap`: bir oyuncunun üstüne bırakıldı → ikisi yer değiştirir (aynı ya da karşı takım).
+ * - `empty`: karşı yarıda boş bir yerin üstüne/yakınına → oyuncu o takıma geçer.
+ * - `move`: kendi yarısında boş alana → sadece konumu değişir.
+ * - `none`: karşı yarıda boş alana bırakıldı ve hedef belirsiz → hiçbir şey olmaz.
  */
+export type DropTarget =
+  | { kind: 'move' }
+  | { kind: 'swap'; side: TeamSide; index: number }
+  | { kind: 'empty'; side: TeamSide; index: number }
+  | { kind: 'none' }
+
+export const dropTargetOf = (m: Match, side: TeamSide, index: number, pos: PitchPos): DropTarget => {
+  const target = sideAt(pos)
+  const team = m[teamKey(target)]
+  const hit = nearestSlot(team, target, pos, (p, i) => p !== null && !(target === side && i === index))
+  if (hit.index !== -1 && hit.d < HIT) return { kind: 'swap', side: target, index: hit.index }
+  if (target === side) return { kind: 'move' }
+  const empty = nearestSlot(team, target, pos, (p) => p === null)
+  if (empty.index !== -1) return { kind: 'empty', side: target, index: empty.index }
+  return { kind: 'none' }
+}
+
+/** Sürükle-bırak sonucunu uygular (kurallar için bkz. dropTargetOf). */
 export const moveOnPitch = (m: Match, side: TeamSide, index: number, pos: PitchPos): Match => {
   const fromKey = teamKey(side)
   const from = cloneTeam(m[fromKey])
   const pid = from.slots[index]
-  const target = sideAt(pos)
-  if (!pid || target === side) {
+  if (!pid) return m
+  const t = dropTargetOf(m, side, index, pos)
+  if (t.kind === 'none') return m
+  if (t.kind === 'move') {
     from.positions![index] = pos
     return { ...m, [fromKey]: from }
   }
-  const toKey = teamKey(target)
+  const toKey = teamKey(t.side)
+  if (t.kind === 'swap' && t.side === side) {
+    // Aynı takımda iki oyuncu yer (slot) değiştirir; konumlar slotta kalır
+    const other = from.slots[t.index]!
+    from.slots[t.index] = pid
+    from.slots[index] = other
+    return { ...m, [fromKey]: from }
+  }
   const to = cloneTeam(m[toKey])
-  const empty = nearestSlot(to, target, pos, (p) => p === null)
-  if (empty.index !== -1) {
-    to.slots[empty.index] = pid
-    to.positions![empty.index] = pos
+  if (t.kind === 'empty') {
+    to.slots[t.index] = pid
     from.slots[index] = null
-    from.positions![index] = null
   } else {
-    const swap = nearestSlot(to, target, pos, (p) => p !== null)
-    const other = to.slots[swap.index]!
-    to.slots[swap.index] = pid
-    to.positions![swap.index] = pos
+    const other = to.slots[t.index]!
+    to.slots[t.index] = pid
     from.slots[index] = other // yer değiştiren oyuncu, gidenin yerine geçer
   }
   return { ...m, [fromKey]: from, [toKey]: to }

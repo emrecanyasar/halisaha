@@ -1,7 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import type { Account, AppData, Attributes, Foot, Goal, Match, PitchPos, Player, Position, TeamSide, Vote } from '../types'
+import type { Account, AppData, Attendance, Attributes, Foot, Goal, Group, Match, PitchPos, Player, Position, TeamSide, Vote } from '../types'
 import { FORMATIONS } from '../lib/constants'
-import { CLUB_NAME, createSeedData, emptyData, withPresetAccounts, withPresetMatch, withRoster, withoutSamples } from '../lib/seed'
+import { CLUB_NAME, createSeedData, emptyData, withMainGroup, withPresetAccounts, withPresetMatch, withRoster, withoutSamples } from '../lib/seed'
+import { withDemoGroups } from '../lib/demo'
+import { isAdmin, newInviteCode, normalizeCode } from '../lib/groups'
 import { uid } from '../lib/utils'
 import { hashPassword, normalizeEmail } from '../lib/auth'
 import { dropOnPitch, moveOnPitch } from '../lib/pitch'
@@ -15,15 +17,23 @@ const STORAGE_KEY = 'halisaha:v1'
 
 /** Eski kayıtları güncel sürüme taşır. */
 export const migrate = (raw: unknown): AppData | null => {
-  const d = raw as Omit<Partial<AppData>, 'version'> & { version?: number }
+  const d = raw as Omit<Partial<AppData>, 'version'> & { version?: number; club?: { name: string } }
   if (!d || !Array.isArray(d.players)) return null
-  let out = d as unknown as AppData
-  if (d.version === 1) out = { ...out, version: 2 as unknown as 6, accounts: [], currentUserId: null }
-  if ((out.version as number) === 2) out = withRoster({ ...out, version: 3 as unknown as 6, club: { name: CLUB_NAME } })
-  if ((out.version as number) === 3) out = withoutSamples({ ...out, version: 4 as unknown as 6 })
-  if ((out.version as number) === 4) out = withPresetAccounts({ ...out, version: 5 as unknown as 6 })
-  if ((out.version as number) === 5) out = withPresetMatch({ ...out, version: 6 })
-  return out.version === 6 ? out : null
+  // Ara sürümler eski şekilde (club alanlı) olduğu için gevşek tipte ilerler
+  type Loose = Omit<AppData, 'version'> & { version: number; club?: { name: string } }
+  let out = d as unknown as Loose
+  if (out.version === 1) out = { ...out, version: 2, accounts: [], currentUserId: null }
+  if (out.version === 2) out = withRoster({ ...out, version: 3, club: { name: CLUB_NAME } } as unknown as AppData) as unknown as Loose
+  if (out.version === 3) out = withoutSamples({ ...out, version: 4 } as unknown as AppData) as unknown as Loose
+  if (out.version === 4) out = withPresetAccounts({ ...out, version: 5 } as unknown as AppData) as unknown as Loose
+  if (out.version === 5) out = withPresetMatch({ ...out, version: 6, groups: [] } as unknown as AppData) as unknown as Loose
+  if (out.version === 6) {
+    // Tek kulüpten çoklu gruba geçiş
+    const name = out.club?.name ?? CLUB_NAME
+    const { club: _club, ...rest } = out
+    out = withMainGroup({ ...rest, version: 7, groups: (rest.groups ?? []).filter((g) => !g.demo) } as unknown as AppData, name) as unknown as Loose
+  }
+  return out.version === 7 ? (out as unknown as AppData) : null
 }
 
 const load = (): AppData => {
@@ -31,7 +41,7 @@ const load = (): AppData => {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
       const parsed = migrate(JSON.parse(raw))
-      if (parsed) return parsed
+      if (parsed) return withDemoGroups(parsed)
     }
   } catch {
     /* depolama kullanılamıyor olabilir */
@@ -47,7 +57,7 @@ const save = (data: AppData) => {
   }
 }
 
-export type NewMatchInput = Pick<Match, 'date' | 'time' | 'venue' | 'playersPerSide'> & {
+export type NewMatchInput = Pick<Match, 'groupId' | 'date' | 'time' | 'venue' | 'playersPerSide'> & {
   teamAName: string
   teamAColor: string
   teamBName: string
@@ -121,9 +131,14 @@ const createActions = (set: (fn: (d: AppData) => AppData) => void, get: () => Ap
 
   setCurrentUser: (id: string | null) => set((d) => ({ ...d, currentUserId: id })),
 
-  addPlayer: (p: Omit<Player, 'id' | 'createdAt'>) => {
+  /** Yeni oyuncu profili. groupId verilirse o gruba üye olarak eklenir (hesabı olmayan oyuncular için). */
+  addPlayer: (p: Omit<Player, 'id' | 'createdAt'>, groupId?: string) => {
     const player: Player = { ...p, id: uid(), createdAt: new Date().toISOString() }
-    set((d) => ({ ...d, players: [...d.players, player] }))
+    set((d) => ({
+      ...d,
+      players: [...d.players, player],
+      groups: groupId ? d.groups.map((g) => (g.id === groupId ? { ...g, memberIds: [...g.memberIds, player.id] } : g)) : d.groups,
+    }))
     return player
   },
   updatePlayer: (id: string, patch: Partial<Player>) =>
@@ -139,6 +154,7 @@ const createActions = (set: (fn: (d: AppData) => AppData) => void, get: () => Ap
       })),
       votes: d.votes.filter((v) => v.voterId !== id && v.targetId !== id),
       accounts: d.accounts.filter((a) => a.playerId !== id),
+      groups: d.groups.map((g) => ({ ...g, memberIds: g.memberIds.filter((x) => x !== id), adminIds: g.adminIds.filter((x) => x !== id) })),
       currentUserId: d.currentUserId === id ? null : d.currentUserId,
     })),
 
@@ -147,6 +163,7 @@ const createActions = (set: (fn: (d: AppData) => AppData) => void, get: () => Ap
     const empty = Array<string | null>(input.playersPerSide).fill(null)
     const match: Match = {
       id: uid(),
+      groupId: input.groupId,
       date: input.date,
       time: input.time,
       venue: input.venue,
@@ -215,7 +232,6 @@ const createActions = (set: (fn: (d: AppData) => AppData) => void, get: () => Ap
         m.id === id ? { ...m, teamA: { ...m.teamA, positions: [] }, teamB: { ...m.teamB, positions: [] } } : m,
       ),
     })),
-  setClubName: (name: string) => set((d) => ({ ...d, club: { ...d.club, name } })),
 
   /** Bir slota oyuncu koyar. Oyuncu başka bir slottaysa yer değiştirirler. */
   assignSlot: (id: string, side: TeamSide, index: number, playerId: string | null) =>
@@ -270,9 +286,88 @@ const createActions = (set: (fn: (d: AppData) => AppData) => void, get: () => Ap
       return { ...d, votes: [...kept, ...fresh] }
     }),
 
-  replaceAll: (data: AppData) => set(() => data),
+  // ---- Gruplar ----
+  /** Yeni grup kurar; kuran kişi yönetici ve üye olur. */
+  createGroup: (name: string, isPublic: boolean): Group | null => {
+    const me = get().currentUserId
+    if (!me) return null
+    const group: Group = {
+      id: uid(),
+      name: name.trim(),
+      inviteCode: newInviteCode(),
+      adminIds: [me],
+      memberIds: [me],
+      isPublic,
+      createdAt: new Date().toISOString(),
+    }
+    set((d) => ({ ...d, groups: [...d.groups, group] }))
+    return group
+  },
+  joinGroupByCode: (code: string): { ok: true; groupId: string } | { ok: false; error: string } => {
+    const d0 = get()
+    const me = d0.currentUserId
+    if (!me) return { ok: false, error: 'Önce giriş yap.' }
+    const c = normalizeCode(code)
+    const g = d0.groups.find((x) => !x.demo && x.inviteCode === c)
+    if (!g) return { ok: false, error: 'Bu kodla bir grup bulunamadı.' }
+    if (!g.memberIds.includes(me)) set((d) => ({ ...d, groups: d.groups.map((x) => (x.id === g.id ? { ...x, memberIds: [...x.memberIds, me] } : x)) }))
+    return { ok: true, groupId: g.id }
+  },
+  /** Üyeyi gruptan çıkarır (kendisi ayrılabilir ya da yönetici çıkarabilir). Yönetici kalmazsa ilk üye yönetici olur. */
+  removeMember: (groupId: string, playerId: string) =>
+    set((d) => ({
+      ...d,
+      groups: d.groups.map((g) => {
+        if (g.id !== groupId) return g
+        const memberIds = g.memberIds.filter((x) => x !== playerId)
+        let adminIds = g.adminIds.filter((x) => x !== playerId)
+        if (!adminIds.length && memberIds.length) adminIds = [memberIds[0]!]
+        return { ...g, memberIds, adminIds }
+      }),
+    })),
+  setAdmin: (groupId: string, playerId: string, on: boolean) =>
+    set((d) => ({
+      ...d,
+      groups: d.groups.map((g) => {
+        if (g.id !== groupId) return g
+        const adminIds = on ? [...new Set([...g.adminIds, playerId])] : g.adminIds.filter((x) => x !== playerId)
+        return adminIds.length ? { ...g, adminIds } : g // son yönetici kendini düşüremez
+      }),
+    })),
+  updateGroup: (id: string, patch: Partial<Pick<Group, 'name' | 'isPublic'>>) =>
+    set((d) => ({ ...d, groups: d.groups.map((g) => (g.id === id ? { ...g, ...patch } : g)) })),
+  regenerateInviteCode: (id: string) =>
+    set((d) => ({ ...d, groups: d.groups.map((g) => (g.id === id ? { ...g, inviteCode: newInviteCode() } : g)) })),
+  /** Grubu siler (sadece yönetici). Maçları ve oyları da silinir. */
+  deleteGroup: (id: string) =>
+    set((d) => {
+      const g = d.groups.find((x) => x.id === id)
+      if (!g || !isAdmin(g, d.currentUserId)) return d
+      const gone = new Set(d.matches.filter((m) => m.groupId === id).map((m) => m.id))
+      return {
+        ...d,
+        groups: d.groups.filter((x) => x.id !== id),
+        matches: d.matches.filter((m) => !gone.has(m.id)),
+        votes: d.votes.filter((v) => !gone.has(v.matchId)),
+      }
+    }),
+
+  /** Yaklaşan maça katılım (null = cevabı geri al) */
+  setAttendance: (matchId: string, playerId: string, value: Attendance | null) =>
+    set((d) => ({
+      ...d,
+      matches: d.matches.map((m) => {
+        if (m.id !== matchId) return m
+        const attendance = { ...(m.attendance ?? {}) }
+        if (value) attendance[playerId] = value
+        else delete attendance[playerId]
+        return { ...m, attendance }
+      }),
+    })),
+
+  replaceAll: (data: AppData) => set(() => withDemoGroups(data)),
   loadSeed: () => set(() => createSeedData()),
-  clearAll: () => set(() => emptyData()),
+  clearAll: () => set(() => withDemoGroups(emptyData())),
 })
 
 type Actions = ReturnType<typeof createActions>
@@ -304,4 +399,18 @@ export const useStore = () => {
 export const usePlayerMap = () => {
   const { data } = useStore()
   return useMemo(() => new Map(data.players.map((p) => [p.id, p])), [data.players])
+}
+
+/** Bir grupta oturum açmış kullanıcının yetkileri */
+export const useGroupAccess = (groupId: string | undefined) => {
+  const { data } = useStore()
+  const group = data.groups.find((g) => g.id === groupId)
+  const me = data.currentUserId && data.players.some((p) => p.id === data.currentUserId) ? data.currentUserId : null
+  return {
+    group,
+    me,
+    isMember: !!group && !!me && group.memberIds.includes(me),
+    /** Kadro, skor ve maç bilgilerini düzenleyebilir mi? (grup yöneticisi; örnek gruplar düzenlenemez) */
+    canEdit: !!group && !group.demo && !!me && group.adminIds.includes(me),
+  }
 }

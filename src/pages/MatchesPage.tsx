@@ -5,24 +5,45 @@ import MatchRow from '../components/MatchRow'
 import { Avatar, EmptyState, Icon, RatingBadge, Tabs } from '../components/ui'
 import { attrColor, formatDayHeader } from '../lib/utils'
 import { isRevealed, matchMvp, participants, playerSummary, votingProgress } from '../lib/stats'
+import { adminGroups, isMember, visibleGroups } from '../lib/groups'
 import type { Match } from '../types'
 
 type Tab = 'upcoming' | 'finished'
 
+const ALL = '__all__'
+const MINE = '__mine__'
+
+/** Maç akışı: herkese açık grupların ve üye olunan grupların maçları */
 export default function MatchesPage() {
   const { data } = useStore()
   const [tab, setTab] = useState<Tab>('upcoming')
+  const [filter, setFilter] = useState<string>(ALL)
+  const loggedIn = !!data.currentUserId && data.players.some((p) => p.id === data.currentUserId)
+  const canCreate = adminGroups(data).length > 0
 
-  const { upcoming, finished, pendingVotes } = useMemo(() => {
+  const { upcoming, finished, pendingVotes, chips, groupName } = useMemo(() => {
+    const groups = visibleGroups(data)
+    const byId = new Map(groups.map((g) => [g.id, g]))
+    const mine = groups.filter((g) => isMember(g, data.currentUserId))
+    const chips = [
+      { id: ALL, name: 'Tüm gruplar' },
+      ...(mine.length ? [{ id: MINE, name: 'Gruplarım' }] : []),
+      ...[...groups].sort((a, b) => Number(isMember(b, data.currentUserId)) - Number(isMember(a, data.currentUserId)) || a.name.localeCompare(b.name, 'tr')).map((g) => ({ id: g.id, name: g.name })),
+    ]
+    const show = (m: Match) =>
+      byId.has(m.groupId) && (filter === ALL || (filter === MINE ? mine.some((g) => g.id === m.groupId) : m.groupId === filter))
+    const visible = data.matches.filter(show)
     const key = (m: Match) => m.date + m.time
-    const upcoming = data.matches.filter((m) => m.status === 'planned').sort((a, b) => (key(a) < key(b) ? -1 : 1))
-    const finished = data.matches.filter((m) => m.status === 'finished').sort((a, b) => (key(a) < key(b) ? 1 : -1))
+    const upcoming = visible.filter((m) => m.status === 'planned').sort((a, b) => (key(a) < key(b) ? -1 : 1))
+    const finished = visible.filter((m) => m.status === 'finished').sort((a, b) => (key(a) < key(b) ? 1 : -1))
     const me = data.currentUserId
     const pendingVotes = me
-      ? finished.filter((m) => !isRevealed(m, data.votes) && participants(m).includes(me) && !votingProgress(m, data.votes).done.includes(me))
+      ? data.matches.filter(
+          (m) => m.status === 'finished' && !isRevealed(m, data.votes) && participants(m).includes(me) && !votingProgress(m, data.votes).done.includes(me),
+        )
       : []
-    return { upcoming, finished, pendingVotes }
-  }, [data])
+    return { upcoming, finished, pendingVotes, chips, groupName: (id: string) => byId.get(id)?.name }
+  }, [data, filter])
 
   const list = tab === 'upcoming' ? upcoming : finished
   const groups = useMemo(() => {
@@ -53,9 +74,26 @@ export default function MatchesPage() {
 
       <div className="flex items-center justify-between px-4 pt-4">
         <h1 className="text-2xl font-extrabold">Maçlar</h1>
-        <Link to="/mac/yeni" className="btn-primary">
-          <Icon name="plus" size={18} /> Maç oluştur
-        </Link>
+        {canCreate && (
+          <Link to="/mac/yeni" className="btn-primary">
+            <Icon name="plus" size={18} /> Maç oluştur
+          </Link>
+        )}
+      </div>
+
+      {/* Grup filtresi */}
+      <div className="mt-3 flex gap-2 overflow-x-auto px-4 pb-1">
+        {chips.map((c) => (
+          <button
+            key={c.id}
+            onClick={() => setFilter(c.id)}
+            className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+              filter === c.id ? 'border-brand bg-brand text-white' : 'border-line bg-surface text-muted hover:text-ink'
+            }`}
+          >
+            {c.name}
+          </button>
+        ))}
       </div>
 
       <div className="mt-2">
@@ -73,8 +111,23 @@ export default function MatchesPage() {
         {groups.length === 0 && (
           <EmptyState
             title={tab === 'upcoming' ? 'Planlanmış maç yok' : 'Henüz biten maç yok'}
-            text={tab === 'upcoming' ? 'Gün ve saati belirleyip kadroyu kur.' : undefined}
-            action={tab === 'upcoming' && <Link to="/mac/yeni" className="btn-primary">Maç oluştur</Link>}
+            text={
+              tab === 'upcoming'
+                ? canCreate
+                  ? 'Gün ve saati belirleyip kadroyu kur.'
+                  : loggedIn
+                    ? 'Bir gruba katıl ya da kendi grubunu kur.'
+                    : undefined
+                : undefined
+            }
+            action={
+              tab === 'upcoming' &&
+              (canCreate ? (
+                <Link to="/mac/yeni" className="btn-primary">Maç oluştur</Link>
+              ) : loggedIn ? (
+                <Link to="/gruplarim" className="btn-primary">Gruplarım</Link>
+              ) : null)
+            }
           />
         )}
         {groups.map(([date, ms]) => (
@@ -82,7 +135,7 @@ export default function MatchesPage() {
             <div className="border-b border-line bg-surface-2/60 px-4 py-2 text-xs font-semibold capitalize text-muted">{formatDayHeader(date)}</div>
             <div className="divide-y divide-line">
               {ms.map((m) => (
-                <MatchRow key={m.id} match={m} votes={data.votes} currentUserId={data.currentUserId} />
+                <MatchRow key={m.id} match={m} votes={data.votes} currentUserId={data.currentUserId} group={groupName(m.groupId)} />
               ))}
             </div>
           </section>
@@ -134,8 +187,8 @@ function Highlights() {
       )}
       <div className="card overflow-hidden">
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
-          <h2 className="font-bold">En iyi oyuncular</h2>
-          <Link to="/oyuncular" className="text-xs font-semibold text-brand">Tümü</Link>
+          <h2 className="font-bold">En yüksek kartlar</h2>
+          <span className="text-[11px] text-muted">tüm gruplar</span>
         </div>
         {top.length === 0 && <p className="p-4 text-sm text-muted">Oylamalar tamamlandıkça burada görünecek.</p>}
         <div className="divide-y divide-line">

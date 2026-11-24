@@ -1,7 +1,7 @@
-import { useRef, useState, type PointerEvent as RPointerEvent, type RefObject } from 'react'
+import { useEffect, useRef, useState, type PointerEvent as RPointerEvent, type RefObject } from 'react'
 import type { Match, PitchPos, Player, TeamSide } from '../types'
 import { clamp, initials, ratingColor } from '../lib/utils'
-import { slotPos } from '../lib/pitch'
+import { dropTargetOf, slotPos } from '../lib/pitch'
 
 interface Props {
   match: Match
@@ -49,7 +49,17 @@ export default function Pitch({ match, players, ratings, mvpId, editable, onSlot
   const innerRef = useRef<HTMLDivElement>(null)
   const ref = pitchRef ?? innerRef
   const [drag, setDrag] = useState<DragState | null>(null)
+  const [hint, setHint] = useState<string | null>(null)
+  useEffect(() => {
+    if (!hint) return
+    const t = window.setTimeout(() => setHint(null), 2200)
+    return () => window.clearTimeout(t)
+  }, [hint])
   const sides: TeamSide[] = ['B', 'A']
+  // Sürüklerken bırakılınca etkilenecek yer (yer değiştirilecek oyuncu ya da geçilecek boş yer)
+  const target = drag?.moved ? dropTargetOf(match, drag.side, drag.index, drag.pos) : null
+  const targetKey = target && (target.kind === 'swap' || target.kind === 'empty') ? `${target.side}-${target.index}` : null
+  const crossing = !!target && target.kind === 'none'
 
   const toPercent = (clientX: number, clientY: number): PitchPos => toPitchPercent(ref.current!, clientX, clientY)
 
@@ -83,7 +93,11 @@ export default function Pitch({ match, players, ratings, mvpId, editable, onSlot
     const d = dragRef.current
     if (!d) return
     const round = (n: number) => Math.round(n * 10) / 10
-    if (d.moved) onMove?.(d.side, d.index, { x: round(d.pos.x), y: round(d.pos.y) })
+    if (d.moved) {
+      const pos = { x: round(d.pos.x), y: round(d.pos.y) }
+      if (dropTargetOf(match, d.side, d.index, pos).kind === 'none') setHint('Takım değiştirmek için bir oyuncunun üstüne bırak')
+      else onMove?.(d.side, d.index, pos)
+    }
     else onSlotClick?.(d.side, d.index)
     update(null)
   }
@@ -109,6 +123,7 @@ export default function Pitch({ match, players, ratings, mvpId, editable, onSlot
           const g = pid ? goalsBy?.get(pid) ?? 0 : 0
           const base = slotPos(team, side, i)
           const dragging = drag?.key === key && drag.moved
+          const isTarget = targetKey === key
           const at = dragging ? drag.pos : base
           return (
             <div
@@ -129,13 +144,13 @@ export default function Pitch({ match, players, ratings, mvpId, editable, onSlot
               <span className="relative">
                 {p ? (
                   <span
-                    className={`grid size-[clamp(36px,9.5cqw,52px)] place-items-center rounded-full border-2 border-white/90 text-[clamp(13px,3.6cqw,18px)] font-bold shadow-lg ${dragging ? 'ring-4 ring-white/40' : ''}`}
+                    className={`grid size-[clamp(36px,9.5cqw,52px)] place-items-center rounded-full border-2 border-white/90 text-[clamp(13px,3.6cqw,18px)] font-bold shadow-lg transition-transform ${dragging ? 'ring-4 ring-white/40' : ''} ${isTarget ? 'scale-110 ring-4 ring-amber-300' : ''} ${dragging && crossing ? 'opacity-60' : ''}`}
                     style={{ background: team.color, color: team.color === '#f8fafc' ? '#111' : '#fff' }}
                   >
                     {p.number || initials(p.name)}
                   </span>
                 ) : (
-                  <span className={`grid size-[clamp(36px,9.5cqw,52px)] place-items-center rounded-full border-2 border-dashed border-white/60 text-lg text-white/80 ${editable ? 'bg-black/20 hover:bg-black/40' : 'bg-black/10'}`}>
+                  <span className={`grid size-[clamp(36px,9.5cqw,52px)] place-items-center rounded-full border-2 border-dashed text-lg text-white/80 ${isTarget ? 'scale-110 border-amber-300 bg-amber-300/30' : 'border-white/60'} ${editable ? 'bg-black/20 hover:bg-black/40' : 'bg-black/10'}`}>
                     +
                   </span>
                 )}
@@ -160,6 +175,20 @@ export default function Pitch({ match, players, ratings, mvpId, editable, onSlot
           )
         })
       })}
+      {(hint || (drag?.moved && target && target.kind !== 'move')) && (
+        <span className="pointer-events-none absolute inset-x-0 top-1/2 z-30 flex -translate-y-1/2 justify-center px-3">
+          <span className="rounded-full bg-black/70 px-3 py-1.5 text-center text-xs font-semibold text-white shadow-lg">
+            {hint ??
+              (target!.kind === 'swap'
+                ? `${players.get((target!.side === 'A' ? match.teamA : match.teamB).slots[target!.index]!)?.name ?? 'Oyuncu'} ile yer değiştir`
+                : target!.kind === 'empty'
+                  ? `${(target!.side === 'A' ? match.teamA : match.teamB).name} takımına geç`
+                  : target!.kind === 'none'
+                    ? 'Bir oyuncunun üstüne bırak'
+                    : '')}
+          </span>
+        </span>
+      )}
       <TeamTag name={match.teamB.name} color={match.teamB.color} pos="top" />
       <TeamTag name={match.teamA.name} color={match.teamA.color} pos="bottom" />
     </div>

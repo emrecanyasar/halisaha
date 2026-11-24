@@ -1,5 +1,7 @@
-import type { AppData, Player, Position, ShirtSize } from '../types'
+import type { AppData, Group, Player, Position, ShirtSize } from '../types'
 import { uid } from './utils'
+import { newInviteCode } from './groups'
+import { withDemoGroups } from './demo'
 
 export const CLUB_NAME = 'Manchester United Siyah Elit'
 
@@ -165,6 +167,7 @@ export const withPresetMatch = (d: AppData): AppData => {
       ...d.matches,
       {
         id: uid(),
+        groupId: d.groups?.find((g) => !g.demo)?.id ?? '',
         date: P.date,
         time: P.time,
         venue: P.venue,
@@ -180,7 +183,31 @@ export const withPresetMatch = (d: AppData): AppData => {
   }
 }
 
-/** Yeni kurulum: gerçek takım kadrosu, hazır deneme hesapları ve planlanan MANU – BAY maçı. */
-export const createSeedData = (): AppData => withPresetMatch(withPresetAccounts(withRoster(emptyData())))
+/**
+ * Tek kulüplü eski yapıdan gruba geçiş: örnek olmayan tüm oyuncular ilk grubun üyesi olur,
+ * hesabı olanlar yönetici olur (eskiden herkes her şeyi düzenleyebiliyordu). Grubu olmayan maçlar bu gruba bağlanır.
+ */
+export const withMainGroup = (d: AppData, name = CLUB_NAME): AppData => {
+  if (d.groups.some((g) => !g.demo)) return d
+  const memberIds = d.players.filter((p) => !p.id.startsWith('demo-')).map((p) => p.id)
+  const withAccount = memberIds.filter((id) => d.accounts.some((a) => a.playerId === id))
+  const group: Group = {
+    id: uid(),
+    name,
+    inviteCode: newInviteCode(),
+    adminIds: withAccount.length ? withAccount : memberIds.slice(0, 1),
+    memberIds,
+    isPublic: true,
+    createdAt: new Date().toISOString(),
+  }
+  return {
+    ...d,
+    groups: [group, ...d.groups],
+    matches: d.matches.map((m) => (m.groupId ? m : { ...m, groupId: group.id })),
+  }
+}
 
-export const emptyData = (): AppData => ({ version: 6, club: { name: CLUB_NAME }, accounts: [], players: [], matches: [], votes: [], currentUserId: null })
+/** Yeni kurulum: gerçek takım kadrosu, hazır deneme hesapları, ilk grup, planlanan MANU – BAY maçı ve örnek gruplar. */
+export const createSeedData = (): AppData => withDemoGroups(withPresetMatch(withMainGroup(withPresetAccounts(withRoster(emptyData())))))
+
+export const emptyData = (): AppData => ({ version: 7, groups: [], accounts: [], players: [], matches: [], votes: [], currentUserId: null })
