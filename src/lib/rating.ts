@@ -162,8 +162,8 @@ const matchesTogetherSince = (data: AppData, a: string, b: string, sinceIso: str
 }
 
 /**
- * Benim ilk değerlendirmemi bekleyen grup arkadaşları (kartı henüz açılmamış olanlar).
- * - waiting: hiç değerlendirmediklerim (kartı açılmamışsa) + geçtikten sonra birlikte WATCH_AFTER maç yaptıklarım
+ * Benim ilk değerlendirmemi bekleyen grup arkadaşları.
+ * - waiting: hiç değerlendirmediklerim + geçtikten sonra birlikte WATCH_AFTER maç yaptıklarım
  * - skipped: geçtiğim, henüz yeniden sorulmayanlar (istersem şimdi değerlendirebilirim)
  */
 export const baseVoteQueue = (data: AppData, me: string | null, groupId?: string) => {
@@ -178,9 +178,8 @@ export const baseVoteQueue = (data: AppData, me: string | null, groupId?: string
       seen.add(id)
       const mine = myBaseVote(data, me, id)
       if (mine?.attrs) continue
-      // Kartı açılmış oyuncu yeni baştan sorulmaz; ama daha önce "sonra" diye geçtiysem yine sorulur
-      // (verdiğim puan başlangıç kartının ortalamasına eklenir)
-      if (!mine && ratingHistory(data, id).base) continue
+      // Kartı başkalarının değerlendirmesiyle açılmış olsa da sorulur (gruba yeni giren herkesi
+      // değerlendirir); verdiğim puan başlangıç kartının ortalamasına eklenir
       if (!mine || matchesTogetherSince(data, me, id, mine.createdAt) >= WATCH_AFTER) waiting.push(id)
       else skipped.push(id)
     }
