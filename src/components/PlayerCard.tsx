@@ -54,6 +54,7 @@ export default function PlayerCard({
         <div className="absolute left-[9%] top-[12%] flex flex-col items-center leading-none">
           <span className="text-[44px] font-black tracking-tight">{ovr ?? '–'}</span>
           <span className="mt-1 text-sm font-extrabold">{player.position}</span>
+          {player.position2 && <span className="mt-0.5 text-[10px] font-bold opacity-70">{player.position2}</span>}
           <span className="mt-2 h-px w-7" style={{ background: t.line }} />
           <span className="mt-2 text-[11px] font-black">{clubShort}</span>
           {player.number > 0 && <span className="mt-1 text-[11px] font-bold opacity-70">#{player.number}</span>}

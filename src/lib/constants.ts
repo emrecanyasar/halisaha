@@ -10,9 +10,24 @@ export const ATTR_LABELS: Record<AttrKey, { short: string; long: string }> = {
 
 export const POSITION_LABELS: Record<Position, string> = {
   KL: 'Kaleci',
-  DEF: 'Defans',
+  SAV: 'Savunma',
   OS: 'Orta saha',
-  FV: 'Forvet',
+  ATK: 'Atak',
+}
+
+export const POSITIONS: Position[] = ['KL', 'SAV', 'OS', 'ATK']
+
+/** "Orta saha · yan: Atak" */
+export const positionText = (p: { position: Position; position2?: Position }) =>
+  POSITION_LABELS[p.position] + (p.position2 && p.position2 !== p.position ? ` · yan: ${POSITION_LABELS[p.position2]}` : '')
+
+/** Oylamada özelliklerin altında görünen kısa açıklama */
+export const ATTR_HINTS: Record<AttrKey, string> = {
+  hucum: 'Şut, bitiricilik, gol yollarında etki',
+  teknik: 'Top kontrolü, dripling',
+  pas: 'Pas isabeti, oyun kurma',
+  savunma: 'Top kapma, yer tutma, geri dönüş',
+  fizik: 'Kondisyon, hız, güç',
 }
 
 /** Her kişi sayısı için seçilebilir dizilişler (kaleci dahil). İlki varsayılan. */

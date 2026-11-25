@@ -1,5 +1,6 @@
-import { ATTR_KEYS, type AppData, type Attributes, type Match, type Player, type TeamSide, type Vote } from '../types'
+import { type AppData, type Attributes, type Match, type Player, type TeamSide, type Vote } from '../types'
 import { avg, round1 } from './utils'
+import { overallOf, ratingHistory, voteScore } from './rating'
 
 export const teamPlayers = (m: Match, side: TeamSide) =>
   (side === 'A' ? m.teamA : m.teamB).slots.filter((s): s is string => !!s)
@@ -37,7 +38,7 @@ export interface MatchRating {
   votes: number
 }
 
-/** Maç ratingleri: oyuncuya verilen oyların ortalaması. Sonuçlar açılmadıysa boş döner. */
+/** Maç ratingleri: oyuncuya verilen oyların (5 özelliğin ortalaması) ortalaması. Sonuçlar açılmadıysa boş döner. */
 export const matchRatings = (m: Match, votes: Vote[]): Map<string, MatchRating> => {
   const out = new Map<string, MatchRating>()
   if (!isRevealed(m, votes)) return out
@@ -45,7 +46,7 @@ export const matchRatings = (m: Match, votes: Vote[]): Map<string, MatchRating> 
   for (const pid of participants(m)) {
     const received = mv.filter((v) => v.targetId === pid)
     if (!received.length) continue
-    out.set(pid, { playerId: pid, rating: round1(avg(received.map((v) => v.rating))), votes: received.length })
+    out.set(pid, { playerId: pid, rating: round1(avg(received.map((v) => voteScore(v.attrs)))), votes: received.length })
   }
   return out
 }
@@ -56,34 +57,16 @@ export const matchMvp = (m: Match, votes: Vote[]) => {
   return best
 }
 
-const revealedMatches = (data: AppData) => data.matches.filter((m) => isRevealed(m, data.votes))
-
 /**
- * Oyuncu özellikleri (0-99): sonuçları açılmış maçlarda oyuncuya verilen tüm
- * özellik oylarının ortalaması × 10. Son maçlar daha ağır basar (yarı ömür: 5 maç).
+ * Oyuncu özellikleri (0-99): ilk değerlendirmeden gelen başlangıç kartı,
+ * her 5 maçlık dönemde maç oylarına göre güncellenir (bkz. rating.ts).
  */
 export const playerAttributes = (data: AppData, playerId: string): { attrs: Attributes; votes: number } | null => {
-  const ms = revealedMatches(data)
-    .filter((m) => participants(m).includes(playerId))
-    .sort((a, b) => (a.date + a.time < b.date + b.time ? 1 : -1))
-  let weightSum = 0
-  let count = 0
-  const sums = Object.fromEntries(ATTR_KEYS.map((k) => [k, 0])) as Attributes
-  ms.forEach((m, i) => {
-    const w = Math.pow(0.5, i / 5)
-    for (const v of data.votes) {
-      if (v.matchId !== m.id || v.targetId !== playerId) continue
-      for (const k of ATTR_KEYS) sums[k] += v.attrs[k] * w
-      weightSum += w
-      count++
-    }
-  })
-  if (!count) return null
-  const attrs = Object.fromEntries(ATTR_KEYS.map((k) => [k, Math.round((sums[k] / weightSum) * 10)])) as Attributes
-  return { attrs, votes: count }
+  const h = ratingHistory(data, playerId)
+  return h.current ? { attrs: h.current, votes: h.votes } : null
 }
 
-export const overall = (attrs: Attributes) => Math.round(avg(ATTR_KEYS.map((k) => attrs[k])))
+export const overall = overallOf
 
 export interface PlayerSummary {
   player: Player
@@ -154,7 +137,7 @@ export const balanceTeams = (data: AppData, ids: string[], perSide: number) => {
     const other = pick === A ? B : A
     ;(pick.length < perSide ? pick : other).push(id)
   })
-  const order = { KL: 0, DEF: 1, OS: 2, FV: 3 } as const
+  const order = { KL: 0, SAV: 1, OS: 2, ATK: 3 } as const
   const arrange = (team: string[]) => {
     const ps = team.map((id) => data.players.find((p) => p.id === id)!)
     ps.sort((a, b) => order[a.position] - order[b.position])

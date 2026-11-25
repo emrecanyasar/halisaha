@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useStore } from '../store/StoreContext'
 import { Avatar, Icon, PageHeader } from '../components/ui'
-import { POSITION_LABELS } from '../lib/constants'
+import { positionText } from '../lib/constants'
 import { isValidEmail } from '../lib/auth'
 import { PasswordInput, StrengthMeter } from './auth/common'
 
@@ -52,7 +52,7 @@ export default function ProfilePage() {
             <div className="min-w-0 flex-1">
               <div className="truncate text-lg font-extrabold">{me.name}</div>
               <div className="truncate text-sm text-muted">{account?.email ?? 'Hesap bağlı değil (test oturumu)'}</div>
-              <div className="text-xs text-muted">{POSITION_LABELS[me.position]}{me.number ? ` · #${me.number}` : ''}</div>
+              <div className="text-xs text-muted">{positionText(me)}{me.number ? ` · #${me.number}` : ''}</div>
             </div>
           </div>
           <Link to={`/oyuncu/${me.id}`} className="card flex items-center justify-between px-4 py-3 text-sm font-semibold hover:bg-surface-2">

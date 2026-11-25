@@ -1,4 +1,4 @@
-import type { AppData, Attendance, FeeSplit, Goal, Group, Match, OpponentAd, OpponentLevel, Player, Position } from '../types'
+import type { AppData, Attendance, BaseVote, FeeSplit, Goal, Group, Match, OpponentAd, OpponentLevel, Player, Position } from '../types'
 import { FORMATIONS } from './constants'
 import { parseDate, seededRandom, todayISO, toISODate } from './utils'
 
@@ -85,6 +85,7 @@ export const withDemoGroups = (d: AppData): AppData => {
     players: d.players.filter((p) => !p.id.startsWith(DEMO_PREFIX)),
     matches: d.matches.filter((m) => !isDemoGroup(m.groupId)),
     votes: d.votes.filter((v) => !v.matchId.startsWith(DEMO_PREFIX)),
+    baseVotes: (d.baseVotes ?? []).filter((v) => !v.id.startsWith(DEMO_PREFIX)),
     opponentAds: (d.opponentAds ?? []).filter((a) => !a.id.startsWith(DEMO_PREFIX)),
   }
   const today = todayISO()
@@ -92,23 +93,35 @@ export const withDemoGroups = (d: AppData): AppData => {
   const groups: Group[] = []
   const players: Player[] = []
   const matches: Match[] = []
+  const baseVotes: BaseVote[] = []
 
   GROUPS.forEach((G, gi) => {
     const rnd = seededRandom(1000 + gi * 77)
     const gid = `${DEMO_PREFIX}g${gi}`
     const count = G.perSide * 2 + 2
     const members: Player[] = Array.from({ length: count }, (_, i) => {
-      const pos: Position = i === 0 || i === G.perSide ? 'KL' : (['DEF', 'OS', 'FV'] as Position[])[i % 3]!
+      const pos: Position = i === 0 || i === G.perSide ? 'KL' : (['SAV', 'OS', 'ATK'] as Position[])[i % 3]!
       return {
         id: `${DEMO_PREFIX}${gi}-${i}`,
         name: `${FIRST[(i * 7 + gi * 5) % FIRST.length]} ${LAST[(i + gi * 3) % LAST.length]}`,
         position: pos,
+        position2: pos === 'KL' ? undefined : i % 4 === 1 ? 'OS' : i % 4 === 2 ? (pos === 'ATK' ? 'OS' : 'ATK') : undefined,
         number: ((i * 13 + gi) % 98) + 1,
         foot: 'Sağ',
         createdAt: now,
       }
     })
     players.push(...members)
+    // Örnek oyuncuların kartları açık olsun: her birini 3 grup arkadaşı değerlendirmiş
+    members.forEach((p, i) => {
+      const level = 4.5 + rnd() * 4
+      const lean = p.position === 'ATK' ? [1.2, 0.5, 0, -1.2, 0] : p.position === 'SAV' ? [-1.2, -0.3, 0, 1.3, 0.4] : p.position === 'KL' ? [-1.5, 0, 0.3, 1, 0] : [0, 0.6, 1, 0, -0.2]
+      for (let k = 1; k <= 3; k++) {
+        const voter = members[(i + k) % members.length]!
+        const v = (j: number) => Math.max(1, Math.min(10, Math.round(level + lean[j]! + (rnd() - 0.5) * 2)))
+        baseVotes.push({ id: `${DEMO_PREFIX}bv${gi}-${i}-${k}`, voterId: voter.id, targetId: p.id, attrs: { hucum: v(0), teknik: v(1), pas: v(2), savunma: v(3), fizik: v(4) }, createdAt: now })
+      }
+    })
     groups.push({
       id: gid,
       name: G.name,
@@ -194,5 +207,6 @@ export const withDemoGroups = (d: AppData): AppData => {
     groups: [...base.groups, ...groups],
     players: [...base.players, ...players],
     matches: [...base.matches, ...matches],
+    baseVotes: [...base.baseVotes, ...baseVotes],
   }
 }

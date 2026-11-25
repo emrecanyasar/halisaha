@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import type { Account, AppData, Attendance, Attributes, Foot, Goal, Group, Match, OpponentAd, PitchPos, Player, Position, TeamSide, Vote } from '../types'
+import type { Account, AppData, Attendance, Attributes, BaseVote, Foot, Goal, Group, Match, OpponentAd, PitchPos, Player, Position, TeamSide, Vote } from '../types'
 import { FORMATIONS } from '../lib/constants'
 import { CLUB_NAME, createSeedData, emptyData, withMainGroup, withPresetAccounts, withPresetMatch, withRoster, withoutSamples } from '../lib/seed'
 import { withDemoGroups } from '../lib/demo'
@@ -34,7 +34,20 @@ export const migrate = (raw: unknown): AppData | null => {
     out = withMainGroup({ ...rest, version: 7, groups: (rest.groups ?? []).filter((g) => !g.demo) } as unknown as AppData, name) as unknown as Loose
   }
   if (out.version === 7) out = { ...out, version: 8, opponentAds: (out.opponentAds ?? []).filter((a) => !a.id.startsWith('demo-')) }
-  return out.version === 8 ? (out as unknown as AppData) : null
+  if (out.version === 8) {
+    // Yeni rating sistemi: genel puan kalktı, mevkiler Savunma/Atak oldu, ilk değerlendirme eklendi
+    const POS: Record<string, Position> = { DEF: 'SAV', FV: 'ATK' }
+    const votes = (out.votes ?? []).map(({ rating: _r, ...v }: Vote & { rating?: number }) => v)
+    const rated = new Set(votes.map((v) => v.targetId))
+    out = {
+      ...out,
+      version: 9,
+      votes,
+      baseVotes: [],
+      players: out.players.map((p) => ({ ...p, position: POS[p.position as string] ?? p.position, ...(rated.has(p.id) ? { legacyRating: true } : {}) })),
+    }
+  }
+  return out.version === 9 ? (out as unknown as AppData) : null
 }
 
 const load = (): AppData => {
@@ -80,6 +93,7 @@ export interface RegisterInput {
   /** Ekipte zaten var olan, hesabı olmayan bir oyuncu profilini sahiplenmek için */
   claimPlayerId: string | null
   position: Position
+  position2?: Position
   number: number
   foot: Foot
 }
@@ -108,7 +122,7 @@ const createActions = (set: (fn: (d: AppData) => AppData) => void, get: () => Ap
       accounts: [...d.accounts, account],
       players: input.claimPlayerId
         ? d.players.map((p) => (p.id === playerId ? { ...p, name: input.name.trim() || p.name } : p))
-        : [...d.players, { id: playerId, name: input.name.trim(), position: input.position, number: input.number, foot: input.foot, createdAt: now }],
+        : [...d.players, { id: playerId, name: input.name.trim(), position: input.position, position2: input.position2, number: input.number, foot: input.foot, createdAt: now }],
       currentUserId: playerId,
     }))
     return { ok: true }
@@ -154,6 +168,7 @@ const createActions = (set: (fn: (d: AppData) => AppData) => void, get: () => Ap
         teamB: { ...m.teamB, slots: m.teamB.slots.map((s) => (s === id ? null : s)) },
       })),
       votes: d.votes.filter((v) => v.voterId !== id && v.targetId !== id),
+      baseVotes: d.baseVotes.filter((v) => v.voterId !== id && v.targetId !== id),
       accounts: d.accounts.filter((a) => a.playerId !== id),
       groups: d.groups.map((g) => ({ ...g, memberIds: g.memberIds.filter((x) => x !== id), adminIds: g.adminIds.filter((x) => x !== id) })),
       currentUserId: d.currentUserId === id ? null : d.currentUserId,
@@ -279,12 +294,21 @@ const createActions = (set: (fn: (d: AppData) => AppData) => void, get: () => Ap
     set((d) => ({ ...d, matches: d.matches.map((m) => (m.id === id ? { ...m, votingClosed: closed } : m)) })),
 
   /** Bir oy verenin bu maçtaki tüm oylarını kaydeder (öncekilerin yerine geçer). */
-  submitVotes: (matchId: string, voterId: string, entries: { targetId: string; rating: number; attrs: Attributes }[]) =>
+  submitVotes: (matchId: string, voterId: string, entries: { targetId: string; attrs: Attributes }[]) =>
     set((d) => {
       const now = new Date().toISOString()
       const kept = d.votes.filter((v) => !(v.matchId === matchId && v.voterId === voterId))
       const fresh: Vote[] = entries.map((e) => ({ id: uid(), matchId, voterId, createdAt: now, ...e }))
       return { ...d, votes: [...kept, ...fresh] }
+    }),
+
+  /** İlk değerlendirme (ana rating). attrs null = "Tanımıyorum, geç". Öncekinin yerine geçer. */
+  submitBaseVote: (targetId: string, attrs: Attributes | null) =>
+    set((d) => {
+      const me = d.currentUserId
+      if (!me || me === targetId) return d
+      const vote: BaseVote = { id: uid(), voterId: me, targetId, attrs, createdAt: new Date().toISOString() }
+      return { ...d, baseVotes: [...d.baseVotes.filter((v) => !(v.voterId === me && v.targetId === targetId)), vote] }
     }),
 
   // ---- Gruplar ----

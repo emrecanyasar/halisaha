@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useStore } from '../../store/StoreContext'
 import { isValidEmail } from '../../lib/auth'
 import { isDemoPlayer } from '../../lib/groups'
-import { POSITION_LABELS } from '../../lib/constants'
+import PositionPicker from '../../components/PositionPicker'
 import type { Foot, Position } from '../../types'
 import { AuthTitle, FormError, PasswordInput, StrengthMeter } from './common'
 
@@ -25,6 +25,7 @@ export default function RegisterPage() {
     password2: '',
     claimPlayerId: '' as string,
     position: 'OS' as Position,
+    position2: undefined as Position | undefined,
     number: 0,
     foot: 'Sağ' as Foot,
     terms: false,
@@ -48,6 +49,7 @@ export default function RegisterPage() {
       password: f.password,
       claimPlayerId: f.claimPlayerId || null,
       position: f.position,
+      position2: f.position2,
       number: f.number,
       foot: f.foot,
     })
@@ -103,16 +105,7 @@ export default function RegisterPage() {
 
       {!f.claimPlayerId && (
         <div className="space-y-3 rounded-xl border border-line bg-surface p-3">
-          <div>
-            <div className="label">Mevki</div>
-            <div className="grid grid-cols-4 gap-1.5">
-              {(Object.keys(POSITION_LABELS) as Position[]).map((p) => (
-                <button type="button" key={p} onClick={() => set('position', p)} className={`rounded-lg py-2 text-xs font-semibold ${f.position === p ? 'bg-brand text-white' : 'bg-surface-2'}`}>
-                  {POSITION_LABELS[p]}
-                </button>
-              ))}
-            </div>
-          </div>
+          <PositionPicker position={f.position} position2={f.position2} onChange={(v) => setF((x) => ({ ...x, ...v }))} />
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label" htmlFor="num">Forma no</label>

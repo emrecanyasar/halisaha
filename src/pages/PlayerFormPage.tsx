@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useStore } from '../store/StoreContext'
 import { ConfirmButton, EmptyState, Icon, PageHeader } from '../components/ui'
 import { canEditPlayer, isAdmin } from '../lib/groups'
-import { POSITION_LABELS } from '../lib/constants'
+import PositionPicker from '../components/PositionPicker'
 import { SHIRT_SIZES, type Foot, type Position, type ShirtSize } from '../types'
 
 export default function PlayerFormPage() {
@@ -19,6 +19,7 @@ export default function PlayerFormPage() {
   const [f, setF] = useState({
     name: existing?.name ?? '',
     position: existing?.position ?? ('OS' as Position),
+    position2: existing?.position2 as Position | undefined,
     number: existing?.number ?? 0,
     foot: existing?.foot ?? ('Sağ' as Foot),
     size: existing?.size as ShirtSize | undefined,
@@ -58,16 +59,7 @@ export default function PlayerFormPage() {
             <label className="label">Ad soyad</label>
             <input className="input" required autoFocus value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="Örn: Ahmet Yılmaz" />
           </div>
-          <div>
-            <label className="label">Mevki</label>
-            <div className="grid grid-cols-4 gap-1.5">
-              {(Object.keys(POSITION_LABELS) as Position[]).map((p) => (
-                <button type="button" key={p} onClick={() => setF({ ...f, position: p })} className={`rounded-xl py-2 text-xs font-semibold ${f.position === p ? 'bg-brand text-white' : 'bg-surface-2'}`}>
-                  {POSITION_LABELS[p]}
-                </button>
-              ))}
-            </div>
-          </div>
+          <PositionPicker position={f.position} position2={f.position2} onChange={(v) => setF({ ...f, ...v })} />
           <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="label">Forma no</label>
@@ -92,7 +84,7 @@ export default function PlayerFormPage() {
             </div>
           </div>
         </div>
-        <p className="px-1 text-xs text-muted">Özellik puanları elle girilmez; maç sonrası oylamalardan otomatik hesaplanır.</p>
+        <p className="px-1 text-xs text-muted">Özellik puanları elle girilmez; grup arkadaşlarının ilk değerlendirmesi ve maç sonrası oylamalardan hesaplanır.</p>
         <button type="submit" className="btn-primary w-full py-3">{existing ? 'Kaydet' : 'Oyuncuyu ekle'}</button>
         {existing && !hasAccount && (
           <ConfirmButton

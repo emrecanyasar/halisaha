@@ -3,7 +3,8 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useGroupAccess, useStore } from '../store/StoreContext'
 import MatchRow from '../components/MatchRow'
 import { Avatar, ConfirmButton, EmptyState, Icon, PageHeader, RatingBadge, Sheet, Tabs } from '../components/ui'
-import { POSITION_LABELS } from '../lib/constants'
+import { positionText } from '../lib/constants'
+import BaseVoteBanner from '../components/BaseVoteBanner'
 import { playerSummary } from '../lib/stats'
 import { attrColor, formatDayHeader } from '../lib/utils'
 import { membersOf } from '../lib/groups'
@@ -42,6 +43,11 @@ export default function GroupPage() {
       <PageHeader title={group.name} />
       <div className="px-4 lg:px-0">
         <GroupHeader group={group} isMember={isMember} canEdit={canEdit} />
+        {isMember && !group.demo && (
+          <div className="mt-3">
+            <BaseVoteBanner groupId={group.id} />
+          </div>
+        )}
       </div>
       <div className="mt-3">
         <Tabs<Tab> value={tab} onChange={setTab} tabs={tabs} />
@@ -180,7 +186,7 @@ function MembersTab({ group, canEdit }: { group: Group; canEdit: boolean }) {
                     {p.id === me && <span className="text-[11px] font-semibold text-brand">(sen)</span>}
                   </div>
                   <div className="flex flex-wrap gap-1 text-[11px] text-muted">
-                    {POSITION_LABELS[p.position]}
+                    {positionText(p)}
                     {admin && <span className="rounded bg-amber-100 px-1 font-semibold text-amber-800">Yönetici</span>}
                     {!hasAccount(p.id) && !group.demo && <span className="rounded bg-surface-2 px-1 font-semibold">Hesapsız</span>}
                   </div>

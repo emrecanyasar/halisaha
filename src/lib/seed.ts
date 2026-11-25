@@ -210,4 +210,4 @@ export const withMainGroup = (d: AppData, name = CLUB_NAME): AppData => {
 /** Yeni kurulum: gerçek takım kadrosu, hazır deneme hesapları, ilk grup, planlanan MANU – BAY maçı ve örnek gruplar. */
 export const createSeedData = (): AppData => withDemoGroups(withPresetMatch(withMainGroup(withPresetAccounts(withRoster(emptyData())))))
 
-export const emptyData = (): AppData => ({ version: 8, groups: [], opponentAds: [], accounts: [], players: [], matches: [], votes: [], currentUserId: null })
+export const emptyData = (): AppData => ({ version: 9, groups: [], opponentAds: [], accounts: [], players: [], matches: [], votes: [], baseVotes: [], currentUserId: null })

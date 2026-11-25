@@ -1,4 +1,4 @@
-export type Position = 'KL' | 'DEF' | 'OS' | 'FV'
+export type Position = 'KL' | 'SAV' | 'OS' | 'ATK'
 export type Foot = 'Sağ' | 'Sol' | 'İki'
 export type ShirtSize = 'S' | 'M' | 'L' | 'XL' | 'XXL'
 export const SHIRT_SIZES: ShirtSize[] = ['S', 'M', 'L', 'XL', 'XXL']
@@ -11,6 +11,13 @@ export interface Player {
   id: string
   name: string
   position: Position
+  /** İsteğe bağlı yan mevki */
+  position2?: Position
+  /**
+   * Ana rating sisteminden önce maç oyu almış oyuncular: ilk değerlendirme yerine
+   * başlangıç kartı ilk maçlarının oylarından çıkarılır.
+   */
+  legacyRating?: boolean
   number: number
   foot: Foot
   /** Forma bedeni */
@@ -74,8 +81,20 @@ export interface Vote {
   matchId: string
   voterId: string
   targetId: string
-  rating: number // 1 - 10, 0.5 adımlarla
-  attrs: Attributes // her biri 1 - 10
+  /** Her biri 1 - 10. Maç puanı bu beşinin ortalamasıdır (genel puan ayrıca verilmez). */
+  attrs: Attributes
+  createdAt: string
+}
+
+/**
+ * İlk değerlendirme (ana rating): grup arkadaşı yeni üyenin 5 özelliğini gizlice puanlar.
+ * attrs null = "Tanımıyorum" (geçildi).
+ */
+export interface BaseVote {
+  id: string
+  voterId: string
+  targetId: string
+  attrs: Attributes | null
   createdAt: string
 }
 
@@ -133,13 +152,14 @@ export interface OpponentAd {
 }
 
 export interface AppData {
-  version: 8
+  version: 9
   groups: Group[]
   opponentAds: OpponentAd[]
   accounts: Account[]
   players: Player[]
   matches: Match[]
   votes: Vote[]
+  baseVotes: BaseVote[]
   /** Oturum açmış kullanıcının oyuncu kimliği (null = çıkış yapılmış) */
   currentUserId: string | null
 }

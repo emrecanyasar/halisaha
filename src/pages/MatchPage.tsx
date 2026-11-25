@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useGroupAccess, usePlayerMap, useStore } from '../store/StoreContext'
 import Pitch, { toPitchPercent } from '../components/Pitch'
 import { Avatar, ConfirmButton, EmptyState, Icon, PageHeader, RatingBadge, Sheet, Tabs } from '../components/ui'
-import { FORMATIONS, POSITION_LABELS, formationLabel } from '../lib/constants'
+import { FORMATIONS, formationLabel, positionText } from '../lib/constants'
 import { balanceTeams, isRevealed, matchMvp, matchRatings, participants, playerSummary, score, votingProgress } from '../lib/stats'
 import { formatDayHeader, initials } from '../lib/utils'
 import { useIsDesktop } from '../lib/hooks'
@@ -453,7 +453,7 @@ function LineupTab({ match, asideTop, asideBottom }: { match: Match; asideTop?: 
                     <div className="flex-1">
                       <div className="text-sm font-semibold">{p.name}</div>
                       <div className="text-xs text-muted">
-                        {POSITION_LABELS[p.position]}
+                        {positionText(p)}
                         {where && <span className="text-amber-600"> · {where} kadrosunda (yer değiştirir)</span>}
                       </div>
                     </div>
@@ -546,7 +546,7 @@ function RatingsTab({ match }: { match: Match }) {
           </span>
           <div className="font-bold">Oylama devam ediyor</div>
           <p className="text-sm text-muted">
-            Oylar kapalı. Kimin kime ne verdiği hiçbir zaman gösterilmez. Herkes oy verince ya da oylama kapatılınca ratingler açılır.
+            Oylar kapalı. Kimin oy verdiği ve kime ne verdiği hiçbir zaman gösterilmez; sadece kaç kişinin oy verdiği görünür. Herkes oy verince ya da oylama kapatılınca ratingler açılır.
           </p>
           <div className="w-full">
             <div className="mb-1 flex justify-between text-xs text-muted">
@@ -566,22 +566,6 @@ function RatingsTab({ match }: { match: Match }) {
           ) : (
             <p className="text-xs text-muted">{me ? 'Bu maçta oynamadığın için oy veremezsin.' : 'Oy vermek için giriş yap.'}</p>
           )}
-        </div>
-        <div>
-          <div className="section-title">Durum</div>
-          <div className="card divide-y divide-line">
-            {participants(match).map((pid) => (
-              <div key={pid} className="flex items-center gap-3 px-4 py-2.5 text-sm">
-                <Avatar player={players.get(pid)} size={28} />
-                <span className="flex-1">{players.get(pid)?.name}</span>
-                {prog.done.includes(pid) ? (
-                  <span className="flex items-center gap-1 text-xs text-brand"><Icon name="check" size={14} /> Oy verdi</span>
-                ) : (
-                  <span className="text-xs text-muted">Bekleniyor</span>
-                )}
-              </div>
-            ))}
-          </div>
         </div>
         {canEdit && (
           <button className="btn-ghost w-full" onClick={() => store.setVotingClosed(match.id, true)}>
@@ -610,7 +594,7 @@ function RatingsTab({ match }: { match: Match }) {
                 {p?.name ?? 'Silinmiş oyuncu'} {mvp?.playerId === id && <span title="Maçın oyuncusu">⭐</span>}
               </div>
               <div className="text-xs text-muted">
-                {p && POSITION_LABELS[p.position]}
+                {p && positionText(p)}
                 {goals > 0 && ` · ⚽ ${goals}`}
                 {assists > 0 && ` · 🅰️ ${assists}`}
                 {r && ` · ${r.votes} oy`}

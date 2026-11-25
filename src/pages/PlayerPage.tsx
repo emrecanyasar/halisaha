@@ -5,7 +5,9 @@ import { useStore } from '../store/StoreContext'
 import { AttrBars, FormChart, RadarChart } from '../components/Charts'
 import { Avatar, EmptyState, Icon, PageHeader, RatingBadge, Stat } from '../components/ui'
 import PlayerCard from '../components/PlayerCard'
-import { POSITION_LABELS } from '../lib/constants'
+import { positionText } from '../lib/constants'
+import RatingHistoryCard from '../components/RatingHistory'
+import { ratingHistory } from '../lib/rating'
 import { participants, playerSummary, score, sideOf } from '../lib/stats'
 import { formatShortDate } from '../lib/utils'
 import { useIsDesktop } from '../lib/hooks'
@@ -23,6 +25,8 @@ export default function PlayerPage() {
       </div>
     )
   const s = playerSummary(data, player)
+  const rh = ratingHistory(data, player.id)
+  const isSelf = data.currentUserId === player.id
 
   // Kart kimliktir: tüm gruplardaki oylardan oluşur. Gruplar ayrıca kendi istatistikleriyle listelenir.
   const groupsOf = data.groups.filter((g) => g.memberIds.includes(player.id))
@@ -113,7 +117,7 @@ export default function PlayerPage() {
         <div className="card overflow-hidden py-6" style={{ background: 'radial-gradient(120% 80% at 50% 0%, #e8f7ee 0%, #ffffff 60%)' }}>
           <PlayerCard player={player} attrs={s.attrs} ovr={s.ovr} club={primaryGroup?.name ?? 'Halısaha'} votes={s.attrVotes} />
           <p className="mx-auto mt-4 max-w-xs px-4 text-center text-[11px] text-muted">
-            Kart, oyuncunun {groupsOf.length > 1 ? `${groupsOf.length} gruptaki ` : ''}tüm maçlarında aldığı kapalı oylardan oluşur.
+            Kart, grup arkadaşlarının ilk değerlendirmesiyle başlar; her 5 maçta bir {groupsOf.length > 1 ? `${groupsOf.length} gruptaki ` : ''}maç oylarına göre güncellenir.
           </p>
         </div>
         {/* Profil kartı */}
@@ -122,7 +126,7 @@ export default function PlayerPage() {
             <Avatar player={player} size={72} color="#16a34a" />
             <div className="min-w-0 flex-1">
               <div className="truncate text-xl font-extrabold">{player.name}</div>
-              <div className="text-sm text-muted">{POSITION_LABELS[player.position]}</div>
+              <div className="text-sm text-muted">{positionText(player)}</div>
               {data.currentUserId === player.id && <span className="mt-1 inline-block rounded-full bg-brand/15 px-2 py-0.5 text-[11px] font-semibold text-brand">Sen</span>}
             </div>
             <div className="flex flex-col items-center gap-1">
@@ -133,7 +137,7 @@ export default function PlayerPage() {
           <div className="mt-4 grid grid-cols-5 gap-2 border-t border-line pt-4">
             <Stat label="Forma" value={player.number || '–'} />
             <Stat label="Ayak" value={player.foot} />
-            <Stat label="Mevki" value={player.position} />
+            <Stat label="Mevki" value={player.position2 ? `${player.position}/${player.position2}` : player.position} />
             <Stat label="Beden" value={player.size ?? '–'} />
             <Stat label="Maç" value={s.matches} />
           </div>
@@ -154,7 +158,7 @@ export default function PlayerPage() {
           <div className="flex justify-center">
             <RadarChart attrs={s.attrs} />
           </div>
-          {!s.attrs && <p className="text-center text-xs text-muted">Özellikler maç sonrası oylamalarla belirlenir. Henüz yeterli oy yok.</p>}
+          {!s.attrs && <p className="text-center text-xs text-muted">Özellikler, grup arkadaşlarının ilk değerlendirmesi tamamlanınca görünür.</p>}
           <div className="mt-2">
             <AttrBars attrs={s.attrs} />
           </div>
@@ -242,6 +246,7 @@ export default function PlayerPage() {
           </div>
           <div className="space-y-4">
             {radar}
+            <RatingHistoryCard h={rh} self={isSelf} />
             {formCard}
             {upcomingCard}
           </div>
@@ -251,6 +256,7 @@ export default function PlayerPage() {
           {profile}
           {upcomingCard}
           {radar}
+          <RatingHistoryCard h={rh} self={isSelf} />
           {formCard}
           {stats}
           {groupsCard}
