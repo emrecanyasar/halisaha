@@ -1,5 +1,7 @@
 import { ATTR_KEYS, type AppData, type Attributes, type Match, type Vote } from '../types'
 import { serverAggregates } from './server'
+import { ATTR_WEIGHTS } from './constants'
+import type { Position } from '../types'
 
 /**
  * Rating sistemi
@@ -19,10 +21,14 @@ const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.l
 const roundSym = (x: number) => Math.sign(x) * Math.round(Math.abs(x))
 const clampAttr = (v: number) => Math.max(1, Math.min(99, v))
 
-/** Bir oydaki 5 özelliğin ortalaması (1-10): maç puanı */
-export const voteScore = (attrs: Attributes) => mean(ATTR_KEYS.map((k) => attrs[k]))
+/**
+ * 5 özelliğin mevkiye göre ağırlıklı ortalaması. Oyda (1-10) maç puanı, kartta (0-99) genel puan.
+ * Mevki bilinmiyorsa düz ortalama.
+ */
+export const voteScore = (attrs: Attributes, position?: Position) =>
+  position ? ATTR_KEYS.reduce((s, k) => s + attrs[k] * ATTR_WEIGHTS[position][k], 0) : mean(ATTR_KEYS.map((k) => attrs[k]))
 
-export const overallOf = (attrs: Attributes) => Math.round(mean(ATTR_KEYS.map((k) => attrs[k])))
+export const overallOf = (attrs: Attributes, position?: Position) => Math.round(voteScore(attrs, position))
 
 const meanAttrs = (list: Attributes[], scale = 1): Attributes =>
   Object.fromEntries(ATTR_KEYS.map((k) => [k, mean(list.map((a) => a[k])) * scale])) as Attributes
@@ -126,7 +132,7 @@ export const ratingHistory = (data: AppData, playerId: string): RatingHistory =>
       const to = Object.fromEntries(
         ATTR_KEYS.map((k) => [k, clampAttr(from[k] + Math.max(-CAP, Math.min(CAP, roundSym((avg[k] - from[k]) * STEP))))]),
       ) as Attributes
-      periods.push({ index: periods.length + 1, from, to, matchIds: chunk.map((e) => e.id), avg: mean(chunk.map((e) => voteScore(e.attrs))) })
+      periods.push({ index: periods.length + 1, from, to, matchIds: chunk.map((e) => e.id), avg: mean(chunk.map((e) => voteScore(e.attrs, player?.position))) })
       votes += chunk.reduce((s, e) => s + e.votes, 0)
       cur = to
     }
@@ -140,7 +146,7 @@ export const ratingHistory = (data: AppData, playerId: string): RatingHistory =>
     periods,
     current: cur,
     pending: pendingEntries.map((e) => e.id),
-    pendingAvg: pendingEntries.length ? mean(pendingEntries.map((e) => voteScore(e.attrs))) : null,
+    pendingAvg: pendingEntries.length ? mean(pendingEntries.map((e) => voteScore(e.attrs, player?.position))) : null,
     votes,
   }
 }

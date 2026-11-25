@@ -1,12 +1,52 @@
 import type { AttrKey, Position } from '../types'
 
-export const ATTR_LABELS: Record<AttrKey, { short: string; long: string }> = {
-  hucum: { short: 'HÜC', long: 'Hücum' },
-  teknik: { short: 'TEK', long: 'Teknik' },
-  pas: { short: 'PAS', long: 'Pas / Oyun kurma' },
-  savunma: { short: 'SAV', long: 'Savunma' },
-  fizik: { short: 'FİZ', long: 'Fizik / Kondisyon' },
+export interface AttrLabel {
+  short: string
+  long: string
+  /** Oylamada adın yanında görünen kısa açıklama */
+  hint: string
 }
+
+/** Saha oyuncularının 5 özelliği */
+export const ATTR_LABELS: Record<AttrKey, AttrLabel> = {
+  hucum: { short: 'ŞUT', long: 'Hücum / Şut', hint: 'Şut, bitiricilik, gol yollarında etki' },
+  teknik: { short: 'TEK', long: 'Teknik', hint: 'Top kontrolü, dripling' },
+  pas: { short: 'PAS', long: 'Pas / Oyun kurma', hint: 'Pas isabeti, oyun kurma' },
+  savunma: { short: 'SAV', long: 'Savunma / İkili mücadele', hint: 'İkili mücadele, top kapma, yer tutma' },
+  fizik: { short: 'FİZ', long: 'Fizik / Kondisyon', hint: 'Kondisyon, hız, güç' },
+}
+
+/**
+ * Kalecinin 5 özelliği (FIFA kartlarındaki gibi). Veride aynı 5 alanda tutulur,
+ * sadece anlamları farklıdır.
+ */
+export const GK_ATTR_LABELS: Record<AttrKey, AttrLabel> = {
+  hucum: { short: 'REF', long: 'Refleks', hint: 'Yakın mesafe şutlara tepki' },
+  teknik: { short: 'ELL', long: 'Elle kontrol', hint: 'Topu tutma, sektirmeme' },
+  pas: { short: 'VUR', long: 'Vuruş / Oyun başlatma', hint: 'Degaj, ayakla ve elle pas' },
+  savunma: { short: 'POZ', long: 'Pozisyon alma', hint: 'Kalede yer tutma, açı kapatma' },
+  fizik: { short: 'UÇM', long: 'Uçma / Çıkış', hint: 'Plonjon, birebirde çıkış' },
+}
+
+export const attrLabels = (position?: Position) => (position === 'KL' ? GK_ATTR_LABELS : ATTR_LABELS)
+
+/**
+ * Genel puanda (ve maç puanında) özelliklerin mevkiye göre ağırlığı; her satırın toplamı 1.
+ * Örn. forvetin savunması genel puanı az etkiler, şutu çok etkiler.
+ */
+export const ATTR_WEIGHTS: Record<Position, Record<AttrKey, number>> = {
+  ATK: { hucum: 0.4, teknik: 0.25, pas: 0.1, savunma: 0.05, fizik: 0.2 },
+  OS: { hucum: 0.15, teknik: 0.25, pas: 0.3, savunma: 0.15, fizik: 0.15 },
+  SAV: { hucum: 0.05, teknik: 0.15, pas: 0.15, savunma: 0.4, fizik: 0.25 },
+  KL: { hucum: 0.25, teknik: 0.2, pas: 0.1, savunma: 0.25, fizik: 0.2 },
+}
+
+/** Mevki için en önemli iki özellik (oylamada "önemli" etiketi) */
+export const keyAttrs = (position: Position): AttrKey[] =>
+  (Object.entries(ATTR_WEIGHTS[position]) as [AttrKey, number][])
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 2)
+    .map(([k]) => k)
 
 export const POSITION_LABELS: Record<Position, string> = {
   KL: 'Kaleci',
@@ -20,15 +60,6 @@ export const POSITIONS: Position[] = ['KL', 'SAV', 'OS', 'ATK']
 /** "Orta saha · yan: Atak" */
 export const positionText = (p: { position: Position; position2?: Position }) =>
   POSITION_LABELS[p.position] + (p.position2 && p.position2 !== p.position ? ` · yan: ${POSITION_LABELS[p.position2]}` : '')
-
-/** Oylamada özelliklerin altında görünen kısa açıklama */
-export const ATTR_HINTS: Record<AttrKey, string> = {
-  hucum: 'Şut, bitiricilik, gol yollarında etki',
-  teknik: 'Top kontrolü, dripling',
-  pas: 'Pas isabeti, oyun kurma',
-  savunma: 'Top kapma, yer tutma, geri dönüş',
-  fizik: 'Kondisyon, hız, güç',
-}
 
 /** Her kişi sayısı için seçilebilir dizilişler (kaleci dahil). İlki varsayılan. */
 export const FORMATIONS: Record<number, number[][]> = {

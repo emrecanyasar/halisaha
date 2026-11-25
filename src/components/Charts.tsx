@@ -1,11 +1,13 @@
 import { Link } from 'react-router-dom'
 import { ATTR_KEYS, type Attributes } from '../types'
-import { ATTR_LABELS } from '../lib/constants'
+import { attrLabels } from '../lib/constants'
+import type { Position } from '../types'
 import { attrColor, formatShortDate, ratingColor } from '../lib/utils'
 import type { PlayerSummary } from '../lib/stats'
 
 /** Sofascore tarzı beşgen radar grafiği */
-export function RadarChart({ attrs, size = 260 }: { attrs: Attributes | null; size?: number }) {
+export function RadarChart({ attrs, size = 260, position }: { attrs: Attributes | null; size?: number; position?: Position }) {
+  const labels = attrLabels(position)
   const c = size / 2
   const R = size * 0.32
   const n = ATTR_KEYS.length
@@ -32,7 +34,7 @@ export function RadarChart({ attrs, size = 260 }: { attrs: Attributes | null; si
         return (
           <g key={k} transform={`translate(${x},${y})`}>
             <text textAnchor="middle" y={-4} fontSize={11} fontWeight={600} fill="#6b7280">
-              {ATTR_LABELS[k].short}
+              {labels[k].short}
             </text>
             <rect x={-14} y={2} width={28} height={18} rx={4} fill={v != null ? attrColor(v) : '#cbd2dc'} />
             <text textAnchor="middle" y={15} fontSize={11} fontWeight={700} fill="#fff">
@@ -93,14 +95,15 @@ export function FormChart({ form }: { form: PlayerSummary['form'] }) {
   )
 }
 
-export function AttrBars({ attrs }: { attrs: Attributes | null }) {
+export function AttrBars({ attrs, position }: { attrs: Attributes | null; position?: Position }) {
+  const labels = attrLabels(position)
   return (
     <div className="space-y-2.5">
       {ATTR_KEYS.map((k) => {
         const v = attrs?.[k]
         return (
           <div key={k} className="flex items-center gap-3 text-sm">
-            <span className="w-32 shrink-0 text-muted">{ATTR_LABELS[k].long}</span>
+            <span className="w-32 shrink-0 text-muted">{labels[k].long}</span>
             <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-2">
               {v != null && <div className="h-full rounded-full" style={{ width: `${v}%`, background: attrColor(v) }} />}
             </div>

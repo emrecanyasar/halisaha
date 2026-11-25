@@ -156,11 +156,11 @@ export default function PlayerPage() {
             </div>
           </div>
           <div className="flex justify-center">
-            <RadarChart attrs={s.attrs} />
+            <RadarChart attrs={s.attrs} position={player.position} />
           </div>
           {!s.attrs && <p className="text-center text-xs text-muted">Özellikler, grup arkadaşlarının ilk değerlendirmesi tamamlanınca görünür.</p>}
           <div className="mt-2">
-            <AttrBars attrs={s.attrs} />
+            <AttrBars attrs={s.attrs} position={player.position} />
           </div>
         </div>
 
@@ -246,7 +246,7 @@ export default function PlayerPage() {
           </div>
           <div className="space-y-4">
             {radar}
-            <RatingHistoryCard h={rh} self={isSelf} />
+            <RatingHistoryCard h={rh} self={isSelf} position={player.position} />
             {formCard}
             {upcomingCard}
           </div>
@@ -256,7 +256,7 @@ export default function PlayerPage() {
           {profile}
           {upcomingCard}
           {radar}
-          <RatingHistoryCard h={rh} self={isSelf} />
+          <RatingHistoryCard h={rh} self={isSelf} position={player.position} />
           {formCard}
           {stats}
           {groupsCard}

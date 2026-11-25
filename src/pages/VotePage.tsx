@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { usePlayerMap, useStore } from '../store/StoreContext'
 import { Avatar, EmptyState, Icon, PageHeader } from '../components/ui'
-import { ATTR_HINTS, ATTR_LABELS, positionText } from '../lib/constants'
+import { ATTR_WEIGHTS, attrLabels, keyAttrs, positionText } from '../lib/constants'
 import { isRevealed, participants, sideOf } from '../lib/stats'
 import { voteScore } from '../lib/rating'
 import { ratingColor } from '../lib/utils'
@@ -74,7 +74,11 @@ export default function VotePage() {
   const v = vals[cur] ?? DEFAULT
   const teammate = sideOf(match, cur) === mySide
   const team = sideOf(match, cur) === 'A' ? match.teamA : match.teamB
-  const score = voteScore(v)
+  const score = voteScore(v, p?.position)
+  const labels = attrLabels(p?.position)
+  const important = p ? keyAttrs(p.position) : []
+  // Mevki için önemli özellikler önce
+  const order = p ? [...ATTR_KEYS].sort((a, b) => ATTR_WEIGHTS[p.position][b] - ATTR_WEIGHTS[p.position][a]) : ATTR_KEYS
   const left = targets.length - done.size
   const last = i === targets.length - 1
 
@@ -97,7 +101,7 @@ export default function VotePage() {
       <div className="space-y-3 px-4 lg:px-0">
         <div className="flex items-start gap-3 rounded-2xl bg-surface-2 p-3 text-xs text-muted">
           <Icon name="lock" size={18} className="mt-0.5 shrink-0 text-brand" />
-          <p>Oyların gizli; kimse kime kaç verdiğini göremez. Her oyuncunun 5 özelliğini 1–10 arası puanla. Maç puanı bu beşinin ortalamasıdır.</p>
+          <p>Oyların gizli; kimse kime kaç verdiğini göremez. Her oyuncunun 5 özelliğini 1–10 arası puanla. Maç puanı mevkiye göre hesaplanır: forvette şut, defansta ikili mücadele daha çok sayılır. Kalecilerin özellikleri farklıdır.</p>
         </div>
 
         <div className="space-y-1.5">
@@ -151,11 +155,13 @@ export default function VotePage() {
             </div>
           </div>
 
-          {ATTR_KEYS.map((k) => (
+          {order.map((k) => (
             <label key={k} className="block">
               <span className="flex items-baseline justify-between gap-2 text-sm">
                 <span>
-                  <b>{ATTR_LABELS[k].long}</b> <span className="text-[11px] text-muted">{ATTR_HINTS[k]}</span>
+                  <b>{labels[k].long}</b>{' '}
+                  {important.includes(k) && <span className="rounded bg-green-100 px-1 py-px text-[10px] font-bold text-green-800">önemli</span>}{' '}
+                  <span className="text-[11px] text-muted">{labels[k].hint}</span>
                 </span>
                 <b className="tabular-nums" style={{ color: ratingColor(v[k]) }}>{v[k]}</b>
               </span>
@@ -168,7 +174,7 @@ export default function VotePage() {
                 onChange={(e) => setAttr(k, Number(e.target.value))}
                 className="mt-1 h-6 w-full cursor-pointer"
                 style={{ accentColor: '#16a34a' }}
-                aria-label={`${p?.name} ${ATTR_LABELS[k].long}`}
+                aria-label={`${p?.name} ${labels[k].long}`}
               />
             </label>
           ))}

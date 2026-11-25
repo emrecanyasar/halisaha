@@ -9,7 +9,7 @@ import { hashPassword, normalizeEmail } from '../lib/auth'
 import { dropOnPitch, moveOnPitch } from '../lib/pitch'
 import { REMOTE, supabase } from '../lib/supabase'
 import { fetchAll, remote } from '../lib/remote'
-import { setServerAggregates } from '../lib/server'
+import { setPlayerPositions, setServerAggregates } from '../lib/server'
 
 /**
  * Veri katmanı.
@@ -544,6 +544,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   ref.current = data
   // İstatistik fonksiyonları sunucudan gelen ortalamaları buradan okur
   setServerAggregates(data.server ?? null)
+  const positions = useMemo(() => new Map(data.players.map((p) => [p.id, p.position])), [data.players])
+  setPlayerPositions(positions)
 
   // ---- Veritabanı senkronizasyonu ----
   const pending = useRef(0)

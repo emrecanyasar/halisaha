@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { usePlayerMap, useStore } from '../store/StoreContext'
 import { Avatar, Sheet } from './ui'
 import AttrSlider from './AttrSlider'
-import { ATTR_LABELS, positionText } from '../lib/constants'
+import { attrLabels, keyAttrs, positionText } from '../lib/constants'
 import { WATCH_AFTER, baseVoteQueue, overallOf } from '../lib/rating'
 import { attrColor } from '../lib/utils'
 import { ATTR_KEYS, type Attributes } from '../types'
@@ -35,7 +35,9 @@ export default function BaseVoteBanner({ groupId }: { groupId: string }) {
   }
 
   const target = queue ? players.get(queue[pos]!) : undefined
-  const ovr = overallOf(Object.fromEntries(ATTR_KEYS.map((k) => [k, vals[k] * 10])) as Attributes)
+  const ovr = overallOf(Object.fromEntries(ATTR_KEYS.map((k) => [k, vals[k] * 10])) as Attributes, target?.position)
+  const labels = attrLabels(target?.position)
+  const important = target ? keyAttrs(target.position) : []
 
   return (
     <>
@@ -85,7 +87,7 @@ export default function BaseVoteBanner({ groupId }: { groupId: string }) {
             </p>
             <div>
               {ATTR_KEYS.map((k) => (
-                <AttrSlider key={k} label={ATTR_LABELS[k].long.split(' /')[0]!} value={vals[k]} onChange={(n) => setVals((x) => ({ ...x, [k]: n }))} />
+                <AttrSlider key={k} label={labels[k].long.split(' /')[0]! + (important.includes(k) ? ' ★' : '')} value={vals[k]} onChange={(n) => setVals((x) => ({ ...x, [k]: n }))} />
               ))}
             </div>
             <div className="flex items-center justify-between text-xs text-muted">

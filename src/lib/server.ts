@@ -1,4 +1,4 @@
-import type { Attributes } from '../types'
+import type { Attributes, Position } from '../types'
 
 /**
  * Sunucudan gelen toplu değerler. Veritabanı modunda oyların kendisi tarayıcıya hiç gelmez
@@ -16,6 +16,13 @@ export interface ServerAggregates {
 }
 
 let current: ServerAggregates | null = null
+let positions = new Map<string, Position>()
+
+/** Oyuncu mevkileri: maç puanı mevkiye göre ağırlıklı hesaplandığı için gerekir */
+export const setPlayerPositions = (m: Map<string, Position>) => {
+  positions = m
+}
+export const positionOf = (playerId: string) => positions.get(playerId)
 
 /** StoreProvider her çizimde günceller; istatistik fonksiyonları buradan okur. */
 export const setServerAggregates = (s: ServerAggregates | null) => {

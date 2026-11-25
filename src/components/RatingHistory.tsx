@@ -1,4 +1,5 @@
-import { ATTR_LABELS } from '../lib/constants'
+import { attrLabels } from '../lib/constants'
+import type { Position } from '../types'
 import { PERIOD, overallOf, type RatingHistory } from '../lib/rating'
 import { attrColor } from '../lib/utils'
 import { ATTR_KEYS, type Attributes } from '../types'
@@ -8,7 +9,7 @@ const deltaClass = (d: number) => (d > 0 ? 'text-green-700' : d < 0 ? 'text-red-
 const deltaPill = (d: number) => (d > 0 ? 'bg-green-100 text-green-800' : d < 0 ? 'bg-red-100 text-red-800' : 'bg-surface-2 text-muted')
 
 /** Rating gelişimi: özet + çizelge (satırda özellikler, sütunda başlangıç ve dönemler) */
-export default function RatingHistoryCard({ h, self }: { h: RatingHistory; self?: boolean }) {
+export default function RatingHistoryCard({ h, self, position }: { h: RatingHistory; self?: boolean; position?: Position }) {
   if (!h.base || !h.current) {
     const n = Math.min(h.baseCount, h.baseRequired)
     return (
@@ -42,13 +43,14 @@ export default function RatingHistoryCard({ h, self }: { h: RatingHistory; self?
     { short: 'Baş.', sub: h.baseSource === 'maclar' ? 'İlk maçlar' : 'Ana rating', attrs: h.base },
     ...h.periods.map((p) => ({ short: `D${p.index}`, sub: `${p.avg.toFixed(1)} ort.`, attrs: p.to })),
   ]
-  const now = overallOf(h.current)
-  const start = overallOf(h.base)
+  const now = overallOf(h.current, position)
+  const start = overallOf(h.base, position)
+  const labels = attrLabels(position)
   const inPeriod = h.pending.length
   const left = PERIOD - inPeriod
   const rows: { name: string; get: (a: Attributes) => number; bold?: boolean }[] = [
-    ...ATTR_KEYS.map((k) => ({ name: ATTR_LABELS[k].long.split(' /')[0]!, get: (a: Attributes) => a[k] })),
-    { name: 'Genel', get: (a: Attributes) => overallOf(a), bold: true },
+    ...ATTR_KEYS.map((k) => ({ name: labels[k].long.split(' /')[0]!, get: (a: Attributes) => a[k] })),
+    { name: 'Genel', get: (a: Attributes) => overallOf(a, position), bold: true },
   ]
 
   return (
@@ -118,7 +120,7 @@ export default function RatingHistoryCard({ h, self }: { h: RatingHistory; self?
         </table>
       </div>
       <p className="text-[11px] leading-relaxed text-muted">
-        Kart her {PERIOD} maçta bir güncellenir: dönemdeki oyların ortalaması karttan yüksekse artar, düşükse azalır. Küçük rakamlar bir önceki döneme göre değişim.
+        Kart her {PERIOD} maçta bir güncellenir: dönemdeki oyların ortalaması karttan yüksekse artar, düşükse azalır. Genel puan mevkiye göre ağırlıklıdır. Küçük rakamlar bir önceki döneme göre değişim.
       </p>
     </div>
   )

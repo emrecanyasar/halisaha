@@ -1,7 +1,7 @@
 import { type AppData, type Attributes, type Match, type Player, type TeamSide, type Vote } from '../types'
 import { avg, round1 } from './utils'
 import { overallOf, ratingHistory, voteScore } from './rating'
-import { serverAggregates } from './server'
+import { positionOf, serverAggregates } from './server'
 
 export const teamPlayers = (m: Match, side: TeamSide) =>
   (side === 'A' ? m.teamA : m.teamB).slots.filter((s): s is string => !!s)
@@ -52,14 +52,18 @@ export const matchRatings = (m: Match, votes: Vote[]): Map<string, MatchRating> 
   if (!isRevealed(m, votes)) return out
   const srv = serverAggregates()
   if (srv) {
-    for (const r of srv.ratings[m.id] ?? []) out.set(r.playerId, r)
+    // Oyuncunun bu maçtaki özellik ortalamalarından, mevkisine göre ağırlıklı
+    for (const pid of participants(m)) {
+      const e = srv.averages[pid]?.find((x) => x.matchId === m.id)
+      if (e) out.set(pid, { playerId: pid, rating: round1(voteScore(e.attrs, positionOf(pid))), votes: e.votes })
+    }
     return out
   }
   const mv = matchVotes(votes, m.id)
   for (const pid of participants(m)) {
     const received = mv.filter((v) => v.targetId === pid)
     if (!received.length) continue
-    out.set(pid, { playerId: pid, rating: round1(avg(received.map((v) => voteScore(v.attrs)))), votes: received.length })
+    out.set(pid, { playerId: pid, rating: round1(avg(received.map((v) => voteScore(v.attrs, positionOf(pid))))), votes: received.length })
   }
   return out
 }
@@ -127,7 +131,7 @@ export const playerSummary = (data: AppData, player: Player): PlayerSummary => {
     matches: finished.length,
     wins, draws, losses, goals, assists, mvps,
     avgRating: ratings.length ? round1(avg(ratings)) : null,
-    ovr: pa ? overall(pa.attrs) : null,
+    ovr: pa ? overall(pa.attrs, player.position) : null,
     attrs: pa?.attrs ?? null,
     attrVotes: pa?.votes ?? 0,
     form,
