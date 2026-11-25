@@ -41,9 +41,9 @@ export const attrLabels = (position?: Position) => (position === 'KL' ? GK_ATTR_
  * Örn. forvetin savunması genel puanı az etkiler, şutu çok etkiler.
  */
 export const ATTR_WEIGHTS: Record<Position, Record<AttrKey, number>> = {
-  ATK: { hucum: 0.35, teknik: 0.2, pas: 0.1, savunma: 0.05, fizik: 0.1, hiz: 0.2 },
+  ATK: { hucum: 0.4, teknik: 0.2, pas: 0.1, savunma: 0.05, fizik: 0.15, hiz: 0.1 },
   OS: { hucum: 0.1, teknik: 0.2, pas: 0.3, savunma: 0.15, fizik: 0.15, hiz: 0.1 },
-  SAV: { hucum: 0.05, teknik: 0.1, pas: 0.15, savunma: 0.4, fizik: 0.15, hiz: 0.15 },
+  SAV: { hucum: 0.05, teknik: 0.1, pas: 0.15, savunma: 0.4, fizik: 0.2, hiz: 0.1 },
   KL: { hucum: 0.25, teknik: 0.2, pas: 0.1, savunma: 0.25, fizik: 0.2, hiz: 0 },
 }
 
