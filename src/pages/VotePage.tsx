@@ -2,13 +2,13 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { usePlayerMap, useStore } from '../store/StoreContext'
 import { Avatar, EmptyState, Icon, PageHeader } from '../components/ui'
-import { ATTR_WEIGHTS, attrLabels, keyAttrs, positionText } from '../lib/constants'
+import { ATTR_WEIGHTS, attrKeysFor, attrLabels, keyAttrs, positionText } from '../lib/constants'
 import { isRevealed, participants, sideOf } from '../lib/stats'
 import { voteScore } from '../lib/rating'
 import { ratingColor } from '../lib/utils'
 import { ATTR_KEYS, type Attributes } from '../types'
 
-const DEFAULT: Attributes = { hucum: 6, teknik: 6, pas: 6, savunma: 6, fizik: 6 }
+const DEFAULT: Attributes = { hucum: 6, teknik: 6, pas: 6, savunma: 6, fizik: 6, hiz: 6 }
 
 /** Maç sonu kapalı oylama: tek tek oyuncu, her oyuncuya 5 özellik puanı. Maç puanı = ortalama. */
 export default function VotePage() {
@@ -78,7 +78,7 @@ export default function VotePage() {
   const labels = attrLabels(p?.position)
   const important = p ? keyAttrs(p.position) : []
   // Mevki için önemli özellikler önce
-  const order = p ? [...ATTR_KEYS].sort((a, b) => ATTR_WEIGHTS[p.position][b] - ATTR_WEIGHTS[p.position][a]) : ATTR_KEYS
+  const order = p ? [...attrKeysFor(p.position)].sort((a, b) => ATTR_WEIGHTS[p.position][b] - ATTR_WEIGHTS[p.position][a]) : ATTR_KEYS
   const left = targets.length - done.size
   const last = i === targets.length - 1
 
@@ -101,7 +101,7 @@ export default function VotePage() {
       <div className="space-y-3 px-4 lg:px-0">
         <div className="flex items-start gap-3 rounded-2xl bg-surface-2 p-3 text-xs text-muted">
           <Icon name="lock" size={18} className="mt-0.5 shrink-0 text-brand" />
-          <p>Oyların gizli; kimse kime kaç verdiğini göremez. Her oyuncunun 5 özelliğini 1–10 arası puanla. Maç puanı mevkiye göre hesaplanır: forvette şut, defansta ikili mücadele daha çok sayılır. Kalecilerin özellikleri farklıdır.</p>
+          <p>Oyların gizli; kimse kime kaç verdiğini göremez. Her oyuncunun özelliklerini 1–10 arası puanla. Maç puanı mevkiye göre hesaplanır: forvette şut ve hız, defansta ikili mücadele daha çok sayılır. Kalecilerin özellikleri farklıdır.</p>
         </div>
 
         <div className="space-y-1.5">

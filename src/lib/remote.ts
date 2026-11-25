@@ -26,6 +26,8 @@ const attrsOf = (r: Row): Attributes => ({
   pas: num(r.pas),
   savunma: num(r.savunma),
   fizik: num(r.fizik),
+  // Hız sonradan eklendi; eski oylarda boşsa fizik puanı kullanılır
+  hiz: r.hiz == null ? num(r.fizik) : num(r.hiz),
 })
 
 const toPlayer = (r: Row): Player => ({
@@ -124,7 +126,7 @@ export async function fetchAll(): Promise<AppData> {
     .map((p) => ({ id: p.user_id as string, email: p.user_id === user?.id ? (user?.email ?? '') : '', passwordHash: '', playerId: p.id as string, createdAt: p.created_at as string }))
 
   return {
-    version: 9,
+    version: 10,
     players: playerRows.map(toPlayer),
     groups: (groups as Row[]).map(
       (g): Group => ({
@@ -280,7 +282,7 @@ export const remote = {
     check(await db().from('votes').upsert(rows, { onConflict: 'match_id,voter_id,target_id' }))
   },
   async submitBaseVote(voterId: string, targetId: string, attrs: Attributes | null) {
-    const a = attrs ?? { hucum: null, teknik: null, pas: null, savunma: null, fizik: null }
+    const a = attrs ?? { hucum: null, teknik: null, pas: null, savunma: null, fizik: null, hiz: null }
     check(await db().from('base_votes').upsert({ voter_id: voterId, target_id: targetId, ...a, created_at: new Date().toISOString() }, { onConflict: 'voter_id,target_id' }))
   },
 

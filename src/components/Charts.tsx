@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
-import { ATTR_KEYS, type Attributes } from '../types'
-import { attrLabels } from '../lib/constants'
+import type { Attributes } from '../types'
+import { attrKeysFor, attrLabels } from '../lib/constants'
 import type { Position } from '../types'
 import { attrColor, formatShortDate, ratingColor } from '../lib/utils'
 import type { PlayerSummary } from '../lib/stats'
@@ -8,27 +8,28 @@ import type { PlayerSummary } from '../lib/stats'
 /** Sofascore tarzı beşgen radar grafiği */
 export function RadarChart({ attrs, size = 260, position }: { attrs: Attributes | null; size?: number; position?: Position }) {
   const labels = attrLabels(position)
+  const keys = attrKeysFor(position)
   const c = size / 2
   const R = size * 0.32
-  const n = ATTR_KEYS.length
+  const n = keys.length
   const point = (i: number, r: number) => {
     const a = -Math.PI / 2 + (i * 2 * Math.PI) / n
     return [c + Math.cos(a) * r, c + Math.sin(a) * r] as const
   }
-  const ring = (f: number) => ATTR_KEYS.map((_, i) => point(i, R * f).join(',')).join(' ')
-  const shape = attrs ? ATTR_KEYS.map((k, i) => point(i, (R * attrs[k]) / 100).join(',')).join(' ') : ''
+  const ring = (f: number) => keys.map((_, i) => point(i, R * f).join(',')).join(' ')
+  const shape = attrs ? keys.map((k, i) => point(i, (R * attrs[k]) / 100).join(',')).join(' ') : ''
 
   return (
     <svg viewBox={`0 0 ${size} ${size}`} className="w-full max-w-[280px]" role="img" aria-label="Oyuncu özellikleri">
       {[1, 0.75, 0.5, 0.25].map((f) => (
         <polygon key={f} points={ring(f)} fill={f === 1 ? '#f6f7fa' : 'none'} stroke="#dfe3ea" strokeWidth={1} />
       ))}
-      {ATTR_KEYS.map((_, i) => {
+      {keys.map((_, i) => {
         const [x, y] = point(i, R)
         return <line key={i} x1={c} y1={c} x2={x} y2={y} stroke="#dfe3ea" strokeWidth={1} />
       })}
       {attrs && <polygon points={shape} fill="rgba(34,197,94,.35)" stroke="#22c55e" strokeWidth={2} strokeLinejoin="round" />}
-      {ATTR_KEYS.map((k, i) => {
+      {keys.map((k, i) => {
         const [x, y] = point(i, R + 30)
         const v = attrs?.[k]
         return (
@@ -99,7 +100,7 @@ export function AttrBars({ attrs, position }: { attrs: Attributes | null; positi
   const labels = attrLabels(position)
   return (
     <div className="space-y-2.5">
-      {ATTR_KEYS.map((k) => {
+      {attrKeysFor(position).map((k) => {
         const v = attrs?.[k]
         return (
           <div key={k} className="flex items-center gap-3 text-sm">

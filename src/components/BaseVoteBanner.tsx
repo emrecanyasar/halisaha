@@ -2,12 +2,12 @@ import { useMemo, useState } from 'react'
 import { usePlayerMap, useStore } from '../store/StoreContext'
 import { Avatar, Sheet } from './ui'
 import AttrSlider from './AttrSlider'
-import { attrLabels, keyAttrs, positionText } from '../lib/constants'
+import { attrKeysFor, attrLabels, keyAttrs, positionText } from '../lib/constants'
 import { WATCH_AFTER, baseVoteQueue, overallOf } from '../lib/rating'
 import { attrColor } from '../lib/utils'
 import { ATTR_KEYS, type Attributes } from '../types'
 
-const DEFAULT: Attributes = { hucum: 6, teknik: 6, pas: 6, savunma: 6, fizik: 6 }
+const DEFAULT: Attributes = { hucum: 6, teknik: 6, pas: 6, savunma: 6, fizik: 6, hiz: 6 }
 
 /** Grup sayfasının üstünde: kartı henüz açılmamış yeni üyeleri gizlice değerlendirme bandı */
 export default function BaseVoteBanner({ groupId }: { groupId: string }) {
@@ -86,7 +86,7 @@ export default function BaseVoteBanner({ groupId }: { groupId: string }) {
               Onu birlikte oynadığın maçlara göre puanla. Bu puanlar başlangıç kartını belirler; sonra maç oylarıyla artar ya da azalır. Henüz izlemediysen geç: birlikte {WATCH_AFTER} maç yapınca tekrar sorulur. Kimse senin puanladığını ya da geçtiğini görmez.
             </p>
             <div>
-              {ATTR_KEYS.map((k) => (
+              {attrKeysFor(target.position).map((k) => (
                 <AttrSlider key={k} label={labels[k].long.split(' /')[0]! + (important.includes(k) ? ' ★' : '')} value={vals[k]} onChange={(n) => setVals((x) => ({ ...x, [k]: n }))} />
               ))}
             </div>

@@ -5,7 +5,8 @@ export type Foot = 'Sağ' | 'Sol' | 'İki'
 export type ShirtSize = 'S' | 'M' | 'L' | 'XL' | 'XXL'
 export const SHIRT_SIZES: ShirtSize[] = ['S', 'M', 'L', 'XL', 'XXL']
 
-export const ATTR_KEYS = ['hucum', 'teknik', 'pas', 'savunma', 'fizik'] as const
+/** Sıra önemli: kadro linkleri bu sırayla saklanır, yeni özellik sona eklenir */
+export const ATTR_KEYS = ['hucum', 'teknik', 'pas', 'savunma', 'fizik', 'hiz'] as const
 export type AttrKey = (typeof ATTR_KEYS)[number]
 export type Attributes = Record<AttrKey, number>
 
@@ -154,7 +155,7 @@ export interface OpponentAd {
 }
 
 export interface AppData {
-  version: 9
+  version: 10
   groups: Group[]
   opponentAds: OpponentAd[]
   accounts: Account[]

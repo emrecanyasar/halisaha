@@ -1,4 +1,4 @@
-import type { AttrKey, Position } from '../types'
+import { ATTR_KEYS, type AttrKey, type Position } from '../types'
 
 export interface AttrLabel {
   short: string
@@ -13,7 +13,8 @@ export const ATTR_LABELS: Record<AttrKey, AttrLabel> = {
   teknik: { short: 'TEK', long: 'Teknik', hint: 'Top kontrolü, dripling' },
   pas: { short: 'PAS', long: 'Pas / Oyun kurma', hint: 'Pas isabeti, oyun kurma' },
   savunma: { short: 'SAV', long: 'Savunma / İkili mücadele', hint: 'İkili mücadele, top kapma, yer tutma' },
-  fizik: { short: 'FİZ', long: 'Fizik / Kondisyon', hint: 'Kondisyon, hız, güç' },
+  fizik: { short: 'FİZ', long: 'Fizik / Kondisyon', hint: 'Kondisyon, güç, dayanıklılık' },
+  hiz: { short: 'HIZ', long: 'Hız', hint: 'Çabukluk, sprint, ilk adım' },
 }
 
 /**
@@ -26,7 +27,12 @@ export const GK_ATTR_LABELS: Record<AttrKey, AttrLabel> = {
   pas: { short: 'VUR', long: 'Vuruş / Oyun başlatma', hint: 'Degaj, ayakla ve elle pas' },
   savunma: { short: 'POZ', long: 'Pozisyon alma', hint: 'Kalede yer tutma, açı kapatma' },
   fizik: { short: 'UÇM', long: 'Uçma / Çıkış', hint: 'Plonjon, birebirde çıkış' },
+  // Kalecide hız sorulmaz ve kartta görünmez (ağırlığı 0)
+  hiz: { short: 'HIZ', long: 'Hız', hint: 'Çabukluk' },
 }
+
+/** Mevkide oylanan ve kartta görünen özellikler: kalecide 5, saha oyuncularında 6 (hız dahil) */
+export const attrKeysFor = (position?: Position): readonly AttrKey[] => (position === 'KL' ? ATTR_KEYS.filter((k) => k !== 'hiz') : ATTR_KEYS)
 
 export const attrLabels = (position?: Position) => (position === 'KL' ? GK_ATTR_LABELS : ATTR_LABELS)
 
@@ -35,10 +41,10 @@ export const attrLabels = (position?: Position) => (position === 'KL' ? GK_ATTR_
  * Örn. forvetin savunması genel puanı az etkiler, şutu çok etkiler.
  */
 export const ATTR_WEIGHTS: Record<Position, Record<AttrKey, number>> = {
-  ATK: { hucum: 0.4, teknik: 0.25, pas: 0.1, savunma: 0.05, fizik: 0.2 },
-  OS: { hucum: 0.15, teknik: 0.25, pas: 0.3, savunma: 0.15, fizik: 0.15 },
-  SAV: { hucum: 0.05, teknik: 0.15, pas: 0.15, savunma: 0.4, fizik: 0.25 },
-  KL: { hucum: 0.25, teknik: 0.2, pas: 0.1, savunma: 0.25, fizik: 0.2 },
+  ATK: { hucum: 0.35, teknik: 0.2, pas: 0.1, savunma: 0.05, fizik: 0.1, hiz: 0.2 },
+  OS: { hucum: 0.1, teknik: 0.2, pas: 0.3, savunma: 0.15, fizik: 0.15, hiz: 0.1 },
+  SAV: { hucum: 0.05, teknik: 0.1, pas: 0.15, savunma: 0.4, fizik: 0.15, hiz: 0.15 },
+  KL: { hucum: 0.25, teknik: 0.2, pas: 0.1, savunma: 0.25, fizik: 0.2, hiz: 0 },
 }
 
 /** Mevki için en önemli iki özellik (oylamada "önemli" etiketi) */

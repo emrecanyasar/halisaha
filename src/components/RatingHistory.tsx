@@ -1,8 +1,8 @@
-import { attrLabels } from '../lib/constants'
+import { attrKeysFor, attrLabels } from '../lib/constants'
 import type { Position } from '../types'
 import { PERIOD, overallOf, type RatingHistory } from '../lib/rating'
 import { attrColor } from '../lib/utils'
-import { ATTR_KEYS, type Attributes } from '../types'
+import type { Attributes } from '../types'
 
 const deltaText = (d: number) => (d > 0 ? `+${d}` : d < 0 ? `−${Math.abs(d)}` : '0')
 const deltaClass = (d: number) => (d > 0 ? 'text-green-700' : d < 0 ? 'text-red-700' : 'text-muted')
@@ -49,7 +49,7 @@ export default function RatingHistoryCard({ h, self, position }: { h: RatingHist
   const inPeriod = h.pending.length
   const left = PERIOD - inPeriod
   const rows: { name: string; get: (a: Attributes) => number; bold?: boolean }[] = [
-    ...ATTR_KEYS.map((k) => ({ name: labels[k].long.split(' /')[0]!, get: (a: Attributes) => a[k] })),
+    ...attrKeysFor(position).map((k) => ({ name: labels[k].long.split(' /')[0]!, get: (a: Attributes) => a[k] })),
     { name: 'Genel', get: (a: Attributes) => overallOf(a, position), bold: true },
   ]
 

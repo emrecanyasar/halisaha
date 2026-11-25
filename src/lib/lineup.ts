@@ -104,11 +104,11 @@ export const scoreTextColor = (v: number) => (v <= 0 ? '#475569' : v <= 3 || v >
 
 /** Oyuncu tipine göre hazır değerler (sonra ince ayar yapılır) */
 export const ATTR_PRESETS: Record<string, Record<AttrKey, number>> = {
-  Golcü: { hucum: 9, teknik: 7, pas: 5, savunma: 3, fizik: 6 },
-  Duvar: { hucum: 3, teknik: 5, pas: 6, savunma: 9, fizik: 7 },
-  Motor: { hucum: 6, teknik: 5, pas: 6, savunma: 6, fizik: 9 },
-  Teknisyen: { hucum: 7, teknik: 9, pas: 8, savunma: 4, fizik: 5 },
-  Kaleci: { hucum: 2, teknik: 5, pas: 5, savunma: 9, fizik: 6 },
+  Golcü: { hucum: 9, teknik: 7, pas: 5, savunma: 3, fizik: 6, hiz: 7 },
+  Duvar: { hucum: 3, teknik: 5, pas: 6, savunma: 9, fizik: 7, hiz: 5 },
+  Motor: { hucum: 6, teknik: 5, pas: 6, savunma: 6, fizik: 9, hiz: 8 },
+  Teknisyen: { hucum: 7, teknik: 9, pas: 8, savunma: 4, fizik: 5, hiz: 6 },
+  Kaleci: { hucum: 2, teknik: 5, pas: 5, savunma: 9, fizik: 6, hiz: 4 },
 }
 
 /** Tek bir özellik değeri: girilmediyse oyuncunun genel gücü kullanılır. */

@@ -51,7 +51,12 @@ export const migrate = (raw: unknown): AppData | null => {
       players: out.players.map((p) => ({ ...p, position: POS[p.position as string] ?? p.position, ...(rated.has(p.id) ? { legacyRating: true } : {}) })),
     }
   }
-  return out.version === 9 ? (out as unknown as AppData) : null
+  if (out.version === 9) {
+    // Hız özelliği eklendi: eski oylarda hız yerine fizik puanı kullanılır
+    const withHiz = <T extends { attrs: Attributes | null }>(v: T): T => (v.attrs && v.attrs.hiz == null ? { ...v, attrs: { ...v.attrs, hiz: v.attrs.fizik } } : v)
+    out = { ...out, version: 10, votes: (out.votes ?? []).map(withHiz), baseVotes: (out.baseVotes ?? []).map(withHiz) }
+  }
+  return out.version === 10 ? (out as unknown as AppData) : null
 }
 
 const load = (): AppData => {

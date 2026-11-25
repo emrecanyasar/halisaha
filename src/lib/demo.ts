@@ -115,11 +115,11 @@ export const withDemoGroups = (d: AppData): AppData => {
     // Örnek oyuncuların kartları açık olsun: her birini 3 grup arkadaşı değerlendirmiş
     members.forEach((p, i) => {
       const level = 4.5 + rnd() * 4
-      const lean = p.position === 'ATK' ? [1.2, 0.5, 0, -1.2, 0] : p.position === 'SAV' ? [-1.2, -0.3, 0, 1.3, 0.4] : p.position === 'KL' ? [-1.5, 0, 0.3, 1, 0] : [0, 0.6, 1, 0, -0.2]
+      const lean = p.position === 'ATK' ? [1.2, 0.5, 0, -1.2, 0, 0.8] : p.position === 'SAV' ? [-1.2, -0.3, 0, 1.3, 0.4, 0] : p.position === 'KL' ? [-1.5, 0, 0.3, 1, 0, -1] : [0, 0.6, 1, 0, -0.2, 0.2]
       for (let k = 1; k <= 3; k++) {
         const voter = members[(i + k) % members.length]!
         const v = (j: number) => Math.max(1, Math.min(10, Math.round(level + lean[j]! + (rnd() - 0.5) * 2)))
-        baseVotes.push({ id: `${DEMO_PREFIX}bv${gi}-${i}-${k}`, voterId: voter.id, targetId: p.id, attrs: { hucum: v(0), teknik: v(1), pas: v(2), savunma: v(3), fizik: v(4) }, createdAt: now })
+        baseVotes.push({ id: `${DEMO_PREFIX}bv${gi}-${i}-${k}`, voterId: voter.id, targetId: p.id, attrs: { hucum: v(0), teknik: v(1), pas: v(2), savunma: v(3), fizik: v(4), hiz: v(5) }, createdAt: now })
       }
     })
     groups.push({

@@ -1,5 +1,5 @@
-import { ATTR_KEYS, type Attributes, type Player } from '../types'
-import { attrLabels } from '../lib/constants'
+import type { Attributes, Player } from '../types'
+import { attrKeysFor, attrLabels } from '../lib/constants'
 import { initials } from '../lib/utils'
 
 /** Genel puana göre kart seviyesi (FIFA'daki bronz / gümüş / altın gibi) */
@@ -76,8 +76,8 @@ export default function PlayerCard({
         </div>
 
         {/* özellikler */}
-        <div className="absolute inset-x-[10%] top-[68%] grid grid-cols-5 gap-1 text-center">
-          {ATTR_KEYS.map((k) => (
+        <div className="absolute inset-x-[8%] top-[68%] grid gap-0.5 text-center" style={{ gridTemplateColumns: `repeat(${attrKeysFor(player.position).length}, minmax(0, 1fr))` }}>
+          {attrKeysFor(player.position).map((k) => (
             <div key={k} className="flex flex-col items-center leading-none">
               <span className="text-[10px] font-bold opacity-75">{attrLabels(player.position)[k].short}</span>
               <span className="mt-1 text-lg font-black tabular-nums">{attrs?.[k] ?? '–'}</span>

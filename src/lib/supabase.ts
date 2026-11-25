@@ -1,7 +1,9 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
-const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined
+// Vite dışında (ör. testlerde) import.meta.env tanımsız olabilir
+const env = (import.meta as { env?: Record<string, string | undefined> }).env ?? {}
+const url = env.VITE_SUPABASE_URL
+const key = env.VITE_SUPABASE_PUBLISHABLE_KEY
 
 /**
  * Supabase bağlantısı. Ortam değişkenleri yoksa (ör. tek dosyalık önizleme) null olur
