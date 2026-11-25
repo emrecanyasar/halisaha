@@ -1,4 +1,6 @@
-export const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4)
+/** Benzersiz kimlik. Veritabanına giden kayıtlar için UUID olmalı. */
+export const uid = () =>
+  typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4)
 
 export const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n))
 

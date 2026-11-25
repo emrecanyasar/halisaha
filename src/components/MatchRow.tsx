@@ -27,9 +27,9 @@ export default function MatchRow({ match, votes, currentUserId, group }: { match
   const finished = match.status === 'finished'
   const s = score(match)
   const revealed = isRevealed(match, votes)
-  const prog = votingProgress(match, votes)
+  const prog = votingProgress(match, votes, currentUserId)
   const filled = participants(match).length
-  const needsMyVote = finished && !revealed && !!currentUserId && participants(match).includes(currentUserId) && !prog.done.includes(currentUserId)
+  const needsMyVote = finished && !revealed && !!currentUserId && participants(match).includes(currentUserId) && !prog.iVoted
 
   return (
     <Link to={`/mac/${match.id}`} className="flex items-center gap-3 px-4 py-3 transition hover:bg-surface-2">
@@ -47,7 +47,7 @@ export default function MatchRow({ match, votes, currentUserId, group }: { match
         )}
         {finished && !revealed && (
           <span className={`rounded-full px-2 py-0.5 font-semibold ${needsMyVote ? 'bg-amber-100 text-amber-700' : 'bg-surface-2 text-muted'}`}>
-            {needsMyVote ? 'Oy ver' : `Oylama ${prog.done.length}/${prog.total}`}
+            {needsMyVote ? 'Oy ver' : `Oylama ${prog.done}/${prog.total}`}
           </span>
         )}
         {finished && revealed && <span className="text-muted">{matchVotes(votes, match.id).length ? 'Ratingler hazır' : 'Maç bitti'}</span>}

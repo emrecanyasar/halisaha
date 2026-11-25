@@ -1,6 +1,7 @@
 import { type AppData, type Attributes, type Match, type Player, type TeamSide, type Vote } from '../types'
 import { avg, round1 } from './utils'
 import { overallOf, ratingHistory, voteScore } from './rating'
+import { serverAggregates } from './server'
 
 export const teamPlayers = (m: Match, side: TeamSide) =>
   (side === 'A' ? m.teamA : m.teamB).slots.filter((s): s is string => !!s)
@@ -17,20 +18,27 @@ export const score = (m: Match) => ({
 
 export const matchVotes = (votes: Vote[], matchId: string) => votes.filter((v) => v.matchId === matchId)
 
-/** Oy durumu: kim oyunu tamamladı? (Kimin kime ne verdiği asla gösterilmez) */
-export const votingProgress = (m: Match, votes: Vote[]) => {
+/** Oy durumu: kaç kişi oyunu tamamladı, ben verdim mi? (Kimin oy verdiği gösterilmez) */
+export const votingProgress = (m: Match, votes: Vote[], me?: string | null) => {
+  const srv = serverAggregates()?.matchStats[m.id]
+  if (srv) return { total: srv.total, done: srv.done, complete: srv.total > 1 && srv.done === srv.total, iVoted: srv.iVoted }
   const ps = participants(m)
   const mv = matchVotes(votes, m.id)
   const done = ps.filter((voter) => {
     const targets = new Set(mv.filter((v) => v.voterId === voter).map((v) => v.targetId))
     return ps.every((t) => t === voter || targets.has(t))
   })
-  return { total: ps.length, done, complete: ps.length > 1 && done.length === ps.length }
+  return { total: ps.length, done: done.length, complete: ps.length > 1 && done.length === ps.length, iVoted: !!me && done.includes(me) }
 }
 
 /** Sonuçlar açık mı? Oylama kapatıldıysa ya da herkes oy verdiyse. */
-export const isRevealed = (m: Match, votes: Vote[]) =>
-  m.status === 'finished' && (m.votingClosed || votingProgress(m, votes).complete)
+export const isRevealed = (m: Match, votes: Vote[]) => {
+  if (m.status !== 'finished') return false
+  if (m.votingClosed) return true
+  const srv = serverAggregates()?.matchStats[m.id]
+  if (srv) return srv.revealed
+  return votingProgress(m, votes).complete
+}
 
 export interface MatchRating {
   playerId: string
@@ -42,6 +50,11 @@ export interface MatchRating {
 export const matchRatings = (m: Match, votes: Vote[]): Map<string, MatchRating> => {
   const out = new Map<string, MatchRating>()
   if (!isRevealed(m, votes)) return out
+  const srv = serverAggregates()
+  if (srv) {
+    for (const r of srv.ratings[m.id] ?? []) out.set(r.playerId, r)
+    return out
+  }
   const mv = matchVotes(votes, m.id)
   for (const pid of participants(m)) {
     const received = mv.filter((v) => v.targetId === pid)

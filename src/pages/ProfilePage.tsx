@@ -20,12 +20,12 @@ export default function ProfilePage() {
   const [pw, setPw] = useState({ current: '', next: '', next2: '' })
   const [pwMsg, setPwMsg] = useState<{ ok: boolean; text: string } | null>(null)
 
-  const saveInfo = (e: React.FormEvent) => {
+  const saveInfo = async (e: React.FormEvent) => {
     e.preventDefault()
     if (name.trim().length < 2) return setInfoMsg({ ok: false, text: 'Adını yaz.' })
     if (account) {
       if (!isValidEmail(email)) return setInfoMsg({ ok: false, text: 'Geçerli bir e-posta gir.' })
-      const r = store.updateEmail(me.id, email)
+      const r = await store.updateEmail(me.id, email)
       if (!r.ok) return setInfoMsg({ ok: false, text: r.error })
     }
     store.updatePlayer(me.id, { name: name.trim() })

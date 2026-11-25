@@ -529,13 +529,13 @@ function RatingsTab({ match }: { match: Match }) {
   const { data } = store
   const players = usePlayerMap()
   const revealed = isRevealed(match, data.votes)
-  const prog = votingProgress(match, data.votes)
+  const prog = votingProgress(match, data.votes, data.currentUserId)
   const ratings = matchRatings(match, data.votes)
   const mvp = matchMvp(match, data.votes)
   const me = data.currentUserId
   const { canEdit } = useGroupAccess(match.groupId)
   const iPlayed = !!me && participants(match).includes(me)
-  const iVoted = !!me && prog.done.includes(me)
+  const iVoted = !!me && prog.iVoted
 
   if (!revealed) {
     return (
@@ -552,11 +552,11 @@ function RatingsTab({ match }: { match: Match }) {
             <div className="mb-1 flex justify-between text-xs text-muted">
               <span>Oy verenler</span>
               <span>
-                {prog.done.length}/{prog.total}
+                {prog.done}/{prog.total}
               </span>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-surface-2">
-              <div className="h-full rounded-full bg-brand" style={{ width: `${(prog.done.length / Math.max(1, prog.total)) * 100}%` }} />
+              <div className="h-full rounded-full bg-brand" style={{ width: `${(prog.done / Math.max(1, prog.total)) * 100}%` }} />
             </div>
           </div>
           {iPlayed ? (
@@ -629,7 +629,7 @@ function RatingsTab({ match }: { match: Match }) {
         </div>
       ))}
       <p className="text-center text-xs text-muted">
-        Rating = maçta oynayan diğer oyuncuların verdiği kapalı oyların ortalaması. {prog.done.length}/{prog.total} kişi oy verdi.
+        Rating = maçta oynayan diğer oyuncuların verdiği kapalı oyların ortalaması. {prog.done}/{prog.total} kişi oy verdi.
       </p>
       {canEdit && match.votingClosed && !prog.complete && (
         <button className="btn-ghost w-full" onClick={() => store.setVotingClosed(match.id, false)}>

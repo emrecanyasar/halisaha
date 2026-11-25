@@ -1,4 +1,5 @@
 import { ATTR_KEYS, type AppData, type Attributes, type Match, type Vote } from '../types'
+import { serverAggregates } from './server'
 
 /**
  * Rating sistemi
@@ -33,6 +34,8 @@ const participantsOf = (m: Match) => [...m.teamA.slots, ...m.teamB.slots].filter
 const revealed = (m: Match, votes: Vote[]) => {
   if (m.status !== 'finished') return false
   if (m.votingClosed) return true
+  const srv = serverAggregates()?.matchStats[m.id]
+  if (srv) return srv.revealed
   const ps = participantsOf(m)
   if (ps.length < 2) return false
   const mv = votes.filter((v) => v.matchId === m.id)
@@ -41,6 +44,8 @@ const revealed = (m: Match, votes: Vote[]) => {
 
 /** Oyuncuyu değerlendirebilecek grup arkadaşı sayısına göre gereken değerlendirme sayısı */
 export const baseRequired = (data: AppData, playerId: string) => {
+  const srv = serverAggregates()?.base[playerId]
+  if (srv) return srv.required
   const mates = new Set<string>()
   for (const g of data.groups) if (g.memberIds.includes(playerId)) g.memberIds.forEach((id) => id !== playerId && mates.add(id))
   return Math.max(1, Math.min(BASE_REQUIRED, mates.size))
@@ -73,20 +78,32 @@ export interface RatingHistory {
 export const ratingHistory = (data: AppData, playerId: string): RatingHistory => {
   const player = data.players.find((p) => p.id === playerId)
   // Oy almış, sonuçları açılmış maçlar (eskiden yeniye)
-  const entries = data.matches
-    .filter((m) => participantsOf(m).includes(playerId) && revealed(m, data.votes))
-    .sort((a, b) => (a.date + a.time < b.date + b.time ? -1 : 1))
-    .map((m) => ({ m, received: data.votes.filter((v) => v.matchId === m.id && v.targetId === playerId) }))
-    .filter((e) => e.received.length > 0)
-    .map((e) => ({ id: e.m.id, attrs: meanAttrs(e.received.map((v) => v.attrs)), votes: e.received.length }))
+  const srv = serverAggregates()
+  // Veritabanı modunda oylar gelmez; maç başına ortalamalar sunucudan gelir
+  const entries = srv
+    ? [...(srv.averages[playerId] ?? [])]
+        .sort((a, b) => (a.date + a.time < b.date + b.time ? -1 : 1))
+        .map((e) => ({ id: e.matchId, attrs: e.attrs, votes: e.votes }))
+    : data.matches
+        .filter((m) => participantsOf(m).includes(playerId) && revealed(m, data.votes))
+        .sort((a, b) => (a.date + a.time < b.date + b.time ? -1 : 1))
+        .map((m) => ({ m, received: data.votes.filter((v) => v.matchId === m.id && v.targetId === playerId) }))
+        .filter((e) => e.received.length > 0)
+        .map((e) => ({ id: e.m.id, attrs: meanAttrs(e.received.map((v) => v.attrs)), votes: e.received.length }))
 
-  const baseVotes = (data.baseVotes ?? []).filter((v) => v.targetId === playerId && v.attrs).map((v) => v.attrs!)
+  const srvBase = srv?.base[playerId]
+  const baseVotes = srv ? [] : (data.baseVotes ?? []).filter((v) => v.targetId === playerId && v.attrs).map((v) => v.attrs!)
+  const baseCount = srvBase ? srvBase.count : baseVotes.length
   const required = baseRequired(data, playerId)
   let base: Attributes | null = null
   let baseSource: RatingHistory['baseSource'] = null
   let queue = entries
   let votes = 0
-  if (baseVotes.length >= required) {
+  if (srvBase?.attrs) {
+    base = roundAttrs(Object.fromEntries(ATTR_KEYS.map((k) => [k, srvBase.attrs![k] * 10])) as Attributes)
+    baseSource = 'degerlendirme'
+    votes += srvBase.count
+  } else if (!srv && baseVotes.length >= required) {
     base = roundAttrs(meanAttrs(baseVotes, 10))
     baseSource = 'degerlendirme'
     votes += baseVotes.length
@@ -118,7 +135,7 @@ export const ratingHistory = (data: AppData, playerId: string): RatingHistory =>
   return {
     base,
     baseSource,
-    baseCount: baseVotes.length,
+    baseCount,
     baseRequired: required,
     periods,
     current: cur,

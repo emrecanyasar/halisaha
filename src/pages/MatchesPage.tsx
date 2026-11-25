@@ -39,7 +39,7 @@ export default function MatchesPage() {
     const me = data.currentUserId
     const pendingVotes = me
       ? data.matches.filter(
-          (m) => m.status === 'finished' && !isRevealed(m, data.votes) && participants(m).includes(me) && !votingProgress(m, data.votes).done.includes(me),
+          (m) => m.status === 'finished' && !isRevealed(m, data.votes) && participants(m).includes(me) && !votingProgress(m, data.votes, me).iVoted,
         )
       : []
     return { upcoming, finished, pendingVotes, chips, groupName: (id: string) => byId.get(id)?.name }

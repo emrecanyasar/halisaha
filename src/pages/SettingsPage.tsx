@@ -42,6 +42,12 @@ export default function SettingsPage() {
     <div className="space-y-6 p-4 lg:max-w-2xl">
       <h1 className="text-2xl font-extrabold">Ayarlar</h1>
 
+      {store.remoteMode ? (
+        <section className="card p-4 text-sm text-muted">
+          Veriler ortak sunucuda (veritabanında) saklanıyor; hangi cihazdan girersen gir aynı grupları, maçları ve kartını görürsün.
+        </section>
+      ) : (
+      <>
       <section>
         <div className="section-title">Test: başka oyuncu olarak geç</div>
         <p className="mb-2 px-1 text-xs text-muted">
@@ -85,6 +91,8 @@ export default function SettingsPage() {
         <input ref={fileRef} type="file" accept="application/json" hidden onChange={(e) => e.target.files?.[0] && importData(e.target.files[0])} />
         {msg && <p className="mt-2 px-1 text-xs text-brand">{msg}</p>}
       </section>
+      </>
+      )}
 
       <section className="px-1 text-xs text-muted">
         <div>Halısaha v0.2 · deneme sürümü</div>

@@ -1,3 +1,5 @@
+import type { ServerAggregates } from './lib/server'
+
 export type Position = 'KL' | 'SAV' | 'OS' | 'ATK'
 export type Foot = 'Sağ' | 'Sol' | 'İki'
 export type ShirtSize = 'S' | 'M' | 'L' | 'XL' | 'XXL'
@@ -160,6 +162,8 @@ export interface AppData {
   matches: Match[]
   votes: Vote[]
   baseVotes: BaseVote[]
+  /** Veritabanı modunda sunucudan gelen toplu değerler (oylar tarayıcıya gelmez) */
+  server?: ServerAggregates
   /** Oturum açmış kullanıcının oyuncu kimliği (null = çıkış yapılmış) */
   currentUserId: string | null
 }

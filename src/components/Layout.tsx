@@ -32,7 +32,7 @@ function Logo({ club }: { club?: string }) {
 /** Uygulama çerçevesi. Giriş zorunlu değil; giriş yapılmadıysa sağ üstte "Giriş yap" gösterilir.
  *  Mobil: üst bar + alt menü. Masaüstü (lg+): menülü üst başlık. */
 export default function Layout() {
-  const { data } = useStore()
+  const { data, syncError, clearSyncError } = useStore()
   const me = data.players.find((p) => p.id === data.currentUserId)
   const { pathname } = useLocation()
   const nav = NAV.filter((n) => !n.auth || me)
@@ -104,6 +104,12 @@ export default function Layout() {
         </div>
       </header>
 
+      {syncError && (
+        <div role="alert" className="mx-auto mt-2 flex w-full max-w-6xl items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-800 lg:px-6">
+          <span className="flex-1">Kaydedilemedi: {syncError}</span>
+          <button onClick={clearSyncError} className="font-semibold hover:underline">Kapat</button>
+        </div>
+      )}
       <main className="mx-auto w-full max-w-2xl flex-1 pb-24 lg:max-w-6xl lg:px-6 lg:pb-10 lg:pt-2">
         <Outlet />
       </main>

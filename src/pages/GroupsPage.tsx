@@ -24,10 +24,10 @@ export default function GroupsPage() {
     const g = store.createGroup(name, isPublic)
     if (g) nav(`/grup/${g.id}?sekme=uyeler`)
   }
-  const join = (e: React.FormEvent) => {
+  const join = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    const r = store.joinGroupByCode(code)
+    const r = await store.joinGroupByCode(code)
     if (r.ok) nav(`/grup/${r.groupId}`)
     else setError(r.error)
   }
